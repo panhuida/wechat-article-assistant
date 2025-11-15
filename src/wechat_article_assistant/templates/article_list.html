@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block title %}文章列表 - 微信公众号文章阅读助手{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-6">
+    <h2 class="text-2xl font-bold mb-6">文章列表</h2>
+
+    <!-- 搜索和筛选 -->
+    <div class="mb-6 space-y-4">
+        <!-- 搜索框 -->
+        <div>
+            <input type="text" id="searchInput" placeholder="搜索公众号名称或作者（按回车搜索）" 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <!-- 筛选条件 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">公众号</label>
+                <select id="filterNickname" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">全部</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">是否删除</label>
+                <select id="filterDeleted" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">全部</option>
+                    <option value="否">否</option>
+                    <option value="是">是</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">是否下载</label>
+                <select id="filterDownloaded" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">全部</option>
+                    <option value="否">否</option>
+                    <option value="是">是</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button onclick="applyFilters()" class="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                    查询
+                </button>
+            </div>
+        </div>
+
+        <!-- 日期筛选 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
+                <input type="date" id="filterStartDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
+                <input type="date" id="filterEndDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量操作 -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center space-x-4">
+            <label class="flex items-center">
+                <input type="checkbox" id="selectAll" class="mr-2 w-4 h-4">
+                <span class="text-sm">全选</span>
+            </label>
+            <span id="selectedCount" class="text-sm text-gray-600">已选择 0 篇文章</span>
+        </div>
+        <div class="space-x-2">
+            <button onclick="downloadSelected()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                下载选中
+            </button>
+            <button onclick="deleteSelected()" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                删除选中
+            </button>
+        </div>
+    </div>
+
+    <!-- 文章列表表格 -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">选择</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">公众号</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">标题</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">作者</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">发布时间</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">已删除</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">已下载</th>
+                </tr>
+            </thead>
+            <tbody id="articleTableBody" class="bg-white divide-y divide-gray-200">
+                <!-- 数据由JavaScript填充 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分页 -->
+    <div class="mt-6 flex justify-between items-center">
+        <div class="text-sm text-gray-700">
+            共 <span id="totalCount">0</span> 篇文章
+        </div>
+        <div class="flex space-x-2">
+            <button onclick="previousPage()" id="prevBtn" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50" disabled>
+                上一页
+            </button>
+            <span id="pageInfo" class="px-3 py-1">第 1 页</span>
+            <button onclick="nextPage()" id="nextBtn" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+                下一页
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+let pageSize = 20;
+let totalArticles = 0;
+let selectedIds = new Set();
+
+// 加载文章列表
+async function loadArticles() {
+    try {
+        const search = document.getElementById('searchInput').value;
+        const nickname = document.getElementById('filterNickname').value;
+        const isDeleted = document.getElementById('filterDeleted').value;
+        const isDownloaded = document.getElementById('filterDownloaded').value;
+        const startDate = document.getElementById('filterStartDate').value;
+        const endDate = document.getElementById('filterEndDate').value;
+
+        const params = new URLSearchParams({
+            page: currentPage,
+            pageSize: pageSize,
+            ...(search && { search }),
+            ...(nickname && { nickname }),
+            ...(isDeleted && { isDeleted }),
+            ...(isDownloaded && { isDownloaded }),
+            ...(startDate && { startDate }),
+            ...(endDate && { endDate })
+        });
+
+        const result = await apiRequest(`/api/article/list?${params}`);
+        if (result.success) {
+            totalArticles = result.total;
+            renderArticles(result.data);
+            updatePagination();
+        }
+    } catch (error) {
+        showNotification('加载文章列表失败', 'error');
+    }
+}
+
+// 渲染文章列表
+function renderArticles(articles) {
+    const tbody = document.getElementById('articleTableBody');
+    tbody.innerHTML = '';
+
+    if (articles.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">暂无数据</td></tr>';
+        return;
+    }
+
+    articles.forEach(article => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="px-6 py-4">
+                <input type="checkbox" class="article-checkbox w-4 h-4" data-id="${article.id}" 
+                       ${selectedIds.has(article.id) ? 'checked' : ''}>
+            </td>
+            <td class="px-6 py-4">${article.nickname || '-'}</td>
+            <td class="px-6 py-4 max-w-md">
+                <a href="${article.article_link}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline">
+                    ${article.article_title || '-'}
+                </a>
+            </td>
+            <td class="px-6 py-4">${article.article_author_name || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap">${article.article_create_time || '-'}</td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 text-xs rounded-full ${article.article_is_deleted === '是' ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}">
+                    ${article.article_is_deleted}
+                </span>
+            </td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 text-xs rounded-full ${article.is_downloaded === '是' ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800'}">
+                    ${article.is_downloaded}
+                </span>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // 添加复选框事件监听
+    document.querySelectorAll('.article-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+}
+
+// 更新分页信息
+function updatePagination() {
+    const totalPages = Math.ceil(totalArticles / pageSize);
+    document.getElementById('totalCount').textContent = totalArticles;
+    document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+    
+    document.getElementById('prevBtn').disabled = currentPage === 1;
+    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+}
+
+// 上一页
+function previousPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        loadArticles();
+    }
+}
+
+// 下一页
+function nextPage() {
+    const totalPages = Math.ceil(totalArticles / pageSize);
+    if (currentPage < totalPages) {
+        currentPage++;
+        loadArticles();
+    }
+}
+
+// 应用筛选
+function applyFilters() {
+    currentPage = 1;
+    loadArticles();
+}
+
+// 全选/取消全选
+document.getElementById('selectAll').addEventListener('change', (e) => {
+    const checkboxes = document.querySelectorAll('.article-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = e.target.checked;
+        const id = parseInt(checkbox.dataset.id);
+        if (e.target.checked) {
+            selectedIds.add(id);
+        } else {
+            selectedIds.delete(id);
+        }
+    });
+    updateSelectedCount();
+});
+
+// 更新选中数量
+function updateSelectedCount() {
+    selectedIds.clear();
+    document.querySelectorAll('.article-checkbox:checked').forEach(checkbox => {
+        selectedIds.add(parseInt(checkbox.dataset.id));
+    });
+    document.getElementById('selectedCount').textContent = `已选择 ${selectedIds.size} 篇文章`;
+    
+    // 更新全选状态
+    const allCheckboxes = document.querySelectorAll('.article-checkbox');
+    const checkedCheckboxes = document.querySelectorAll('.article-checkbox:checked');
+    document.getElementById('selectAll').checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+}
+
+// 下载选中文章
+async function downloadSelected() {
+    if (selectedIds.size === 0) {
+        showNotification('请选择要下载的文章', 'error');
+        return;
+    }
+
+    if (!confirm(`确定要下载选中的 ${selectedIds.size} 篇文章吗？`)) {
+        return;
+    }
+
+    try {
+        showNotification('开始下载，请稍候...', 'info');
+        const result = await apiRequest('/api/article/download', {
+            method: 'POST',
+            body: JSON.stringify({ ids: Array.from(selectedIds) })
+        });
+
+        if (result.success) {
+            showNotification(result.message, 'success');
+            loadArticles();
+            selectedIds.clear();
+            updateSelectedCount();
+        } else {
+            showNotification(result.message || '下载失败', 'error');
+        }
+    } catch (error) {
+        showNotification('下载失败', 'error');
+    }
+}
+
+// 删除选中文章
+async function deleteSelected() {
+    if (selectedIds.size === 0) {
+        showNotification('请选择要删除的文章', 'error');
+        return;
+    }
+
+    if (!confirm(`确定要删除选中的 ${selectedIds.size} 篇文章吗？`)) {
+        return;
+    }
+
+    try {
+        const result = await apiRequest('/api/article/delete', {
+            method: 'POST',
+            body: JSON.stringify({ ids: Array.from(selectedIds) })
+        });
+
+        if (result.success) {
+            showNotification(result.message, 'success');
+            loadArticles();
+            selectedIds.clear();
+            updateSelectedCount();
+        } else {
+            showNotification(result.message || '删除失败', 'error');
+        }
+    } catch (error) {
+        showNotification('删除失败', 'error');
+    }
+}
+
+// 加载公众号名称列表（用于筛选）
+async function loadAccountNames() {
+    try {
+        const result = await apiRequest('/api/article/names');
+        if (result.success) {
+            const select = document.getElementById('filterNickname');
+            result.data.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('加载公众号名称失败:', error);
+    }
+}
+
+// 搜索框回车事件
+document.getElementById('searchInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        applyFilters();
+    }
+});
+
+// 页面加载时初始化
+window.addEventListener('DOMContentLoaded', () => {
+    loadArticles();
+    loadAccountNames();
+});
+</script>
+{% endblock %}

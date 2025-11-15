@@ -1,0 +1,18 @@
+{
+    "base_resp": {
+        "ret": 0,
+        "err_msg": "ok"
+    },
+    "list": [
+        {
+            "fakeid": "MjM5ODE2NzYxMg==",
+            "nickname": "段永朝读书",
+            "alias": "duan-yongchao",
+            "round_head_img": "http:\/\/mmbiz.qpic.cn\/mmbiz_png\/ues8YmvWIDOtlptGKc5OvTFPJiciaBnCNxQTDPlzpaHgrHmOpDicFmroZSTib4bD1KtQqf0iaciauan1ZRuiaNJeWtWLw\/0?wx_fmt=png",
+            "service_type": 0,
+            "signature": "读书即生活，生活即读书",
+            "verify_status": 1
+        }
+    ],
+    "total": 1
+}
