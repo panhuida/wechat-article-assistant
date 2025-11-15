@@ -1,0 +1,17 @@
+# 微信公众号文章URL列表示例
+# 
+# 使用说明：
+# 1. 每行一个文章链接
+# 2. 以 # 开头的行是注释，会被忽略
+# 3. 空行会被忽略
+# 
+# 使用方法：
+#   wechat-cli download --file urls.txt
+#   或
+#   python wechat-cli.py download --file urls.txt
+#
+# 示例链接（请替换为实际的文章链接）：
+
+https://mp.weixin.qq.com/s/example1
+https://mp.weixin.qq.com/s/example2
+https://mp.weixin.qq.com/s/example3

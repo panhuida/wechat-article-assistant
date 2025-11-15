@@ -26,7 +26,12 @@ class Config:
     LOG_DIR = BASE_DIR / os.getenv("LOG_DIR", "logs")
 
     # 下载配置
-    DOWNLOAD_DIR = BASE_DIR / os.getenv("DOWNLOAD_DIR", "data/downloads")
+    # 优先使用 DOWNLOAD_PATH（绝对路径），如果没有则使用 DOWNLOAD_DIR（相对路径）
+    _download_path = os.getenv("DOWNLOAD_PATH")
+    if _download_path:
+        DOWNLOAD_DIR = Path(_download_path)
+    else:
+        DOWNLOAD_DIR = BASE_DIR / os.getenv("DOWNLOAD_DIR", "data/downloads")
 
     # 微信公众平台配置
     WECHAT_MP_URL = os.getenv("WECHAT_MP_URL", "https://mp.weixin.qq.com")

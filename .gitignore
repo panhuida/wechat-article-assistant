@@ -45,8 +45,7 @@ logs/
 *.log
 
 # 下载文件
-data/downloads/
-data/wechat_session.json
+data/
 
 # 测试
 .pytest_cache/

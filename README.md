@@ -2,6 +2,12 @@
 
 一个功能完善的Web应用，用于管理、采集和下载微信公众号历史文章。
 
+📖 **快速链接**：
+- [命令行工具 - 3分钟快速入门](docs/CLI_QUICKSTART.md)（⭐ 推荐新手）
+- [命令行工具 - 完整使用指南](docs/CLI_GUIDE.md)
+- [命令行工具 - 使用演示](docs/CLI_DEMO.md)
+- [Windows全局配置指南](docs/WINDOWS_SETUP.md)
+
 ## ✨ 功能特点
 
 - 📚 **公众号管理**：支持手工录入和自动搜索添加公众号
@@ -96,13 +102,61 @@ python run.py
 
 ### 命令行工具使用
 
-#### 下载单个文章
+本工具提供多种使用方式，任选其一即可。
+
+#### 方式一：使用简化脚本（推荐）
+
+**Windows用户**：
+```bash
+# 下载单个文章
+wechat-cli download <article_url>
+
+# 批量下载
+wechat-cli download --file urls.txt
+
+# 指定输出目录
+wechat-cli download <article_url> --output E:\documents\文摘\公众号
+
+# 显示详细日志
+wechat-cli download <article_url> --verbose
+```
+
+**Linux/Mac用户**：
+```bash
+# 下载单个文章
+python wechat-cli.py download <article_url>
+
+# 批量下载
+python wechat-cli.py download --file urls.txt
+
+# 指定输出目录
+python wechat-cli.py download <article_url> --output /path/to/output
+
+# 显示详细日志
+python wechat-cli.py download <article_url> --verbose
+```
+
+#### 方式二：使用Python模块
 
 ```bash
 python -m wechat_article_assistant download <article_url>
+python -m wechat_article_assistant download --file urls.txt
+python -m wechat_article_assistant download <article_url> --output /path/to/output
+python -m wechat_article_assistant download <article_url> --verbose
 ```
 
-#### 批量下载
+#### 方式三：安装为系统命令
+
+```bash
+# 安装包（开发模式）
+pip install -e .
+
+# 之后可以直接使用命令
+wechat-article-assistant download <article_url>
+wechat-article-assistant download --file urls.txt
+```
+
+#### 批量下载文件格式
 
 创建一个文本文件（如 `urls.txt`），每行一个文章链接：
 
@@ -110,24 +164,6 @@ python -m wechat_article_assistant download <article_url>
 https://mp.weixin.qq.com/s/xxx
 https://mp.weixin.qq.com/s/yyy
 https://mp.weixin.qq.com/s/zzz
-```
-
-然后执行：
-
-```bash
-python -m wechat_article_assistant download --file urls.txt
-```
-
-#### 指定输出目录
-
-```bash
-python -m wechat_article_assistant download <article_url> --output /path/to/output
-```
-
-#### 显示详细日志
-
-```bash
-python -m wechat_article_assistant download <article_url> --verbose
 ```
 
 ## 🗂️ 项目结构
