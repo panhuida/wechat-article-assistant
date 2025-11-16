@@ -98,7 +98,7 @@ class WechatService:
             db.refresh(account)
 
             app_logger.info(f"创建公众号成功: {account.nickname}")
-            return True, "创建成功", account.id
+            return True, "创建成功", int(account.id)
 
         except Exception as e:
             app_logger.error(f"创建公众号失败: {e}")
@@ -188,7 +188,7 @@ class WechatService:
             account = db.query(WechatAccount).filter(WechatAccount.id == account_id).first()
 
             if account:
-                account.collect_status = status
+                account.collect_status = status  # type: ignore[assignment]
                 db.commit()
                 return True
             return False
@@ -216,7 +216,7 @@ class WechatService:
             account = db.query(WechatAccount).filter(WechatAccount.id == account_id).first()
 
             if account:
-                account.begin = begin
+                account.begin = begin  # type: ignore[assignment]
                 db.commit()
                 return True
             return False

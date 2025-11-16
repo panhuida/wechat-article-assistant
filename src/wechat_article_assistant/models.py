@@ -1,14 +1,17 @@
 """数据模型定义"""
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
-from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 
 from .config import config
 
 # 创建基类
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """SQLAlchemy 声明式基类"""
+    pass
 
 # 创建引擎
 engine = create_engine(config.DATABASE_URL, echo=False)

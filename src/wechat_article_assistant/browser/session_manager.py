@@ -3,7 +3,7 @@
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from ..config import config
 from ..utils.logger import app_logger
@@ -12,7 +12,7 @@ from ..utils.logger import app_logger
 class SessionManager:
     """会话管理器"""
 
-    def __init__(self, session_file: Path = None):
+    def __init__(self, session_file: Optional[Path] = None):
         """
         初始化会话管理器
 
@@ -28,7 +28,7 @@ class SessionManager:
         self._cache_ttl: int = 300  # 缓存5分钟
 
     def save_session(
-        self, cookies: list, token: str = None, other_data: Dict[str, Any] = None
+        self, cookies: list, token: Optional[str] = None, other_data: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         保存会话数据
@@ -81,7 +81,7 @@ class SessionManager:
                 return None
 
             with open(self.session_file, "r", encoding="utf-8") as f:
-                session_data = json.load(f)
+                session_data = cast(Dict[str, Any], json.load(f))
 
             # 更新缓存
             self._cached_session = session_data

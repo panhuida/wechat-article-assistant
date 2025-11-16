@@ -25,7 +25,7 @@ class WechatLogin:
         Returns:
             是否已登录
         """
-        return self.session_manager.is_session_valid()
+        return bool(self.session_manager.is_session_valid())
 
     def get_qr_code_url(self) -> Optional[str]:
         """
@@ -107,7 +107,6 @@ class WechatLogin:
         except Exception as e:
             app_logger.error(f"获取登录二维码失败: {e}", exc_info=True)
             return None
-            return None
 
     def wait_for_login(self, timeout: int = 300) -> bool:
         """
@@ -161,8 +160,8 @@ class WechatLogin:
                             try:
                                 page.wait_for_selector("body", timeout=5000)
                                 app_logger.info("页面已加载完成")
-                            except:
-                                pass
+                            except Exception as e:  # Playwright 报错时记录调试信息
+                                app_logger.debug("等待登录后页面内容时出错: %s", e)
 
                             # 保存会话数据
                             app_logger.info("开始保存登录会话...")
@@ -187,8 +186,8 @@ class WechatLogin:
                                 app_logger.info(f"确认登录成功，当前URL: {current_url}")
                                 self._save_login_session()
                                 return True
-                    except:
-                        pass
+                    except Exception as e:
+                        app_logger.debug("查询二维码元素时出错: %s", e)
 
                 except Exception as e:
                     app_logger.debug(f"检查登录状态时出错: {e}")
@@ -241,8 +240,6 @@ class WechatLogin:
 
         except Exception as e:
             app_logger.error(f"保存登录会话失败: {e}", exc_info=True)
-        except Exception as e:
-            app_logger.error(f"保存登录会话失败: {e}")
 
     def login_with_session(self) -> bool:
         """

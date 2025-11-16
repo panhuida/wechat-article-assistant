@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from ..config import config
 
 
-def setup_logger(name: str, log_file: str = None, level: str = None) -> logging.Logger:
+def setup_logger(name: str, log_file: str | None = None, level: str | None = None) -> logging.Logger:
     """
     设置日志记录器
 

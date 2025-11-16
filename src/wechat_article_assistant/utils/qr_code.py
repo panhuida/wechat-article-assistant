@@ -30,7 +30,7 @@ def generate_qr_code(data: str, size: int = 300) -> str:
 
     # 转换为base64
     buffered = BytesIO()
-    img.save(buffered, format="PNG")
+    img.save(buffered)
     img_str = base64.b64encode(buffered.getvalue()).decode()
 
     return f"data:image/png;base64,{img_str}"

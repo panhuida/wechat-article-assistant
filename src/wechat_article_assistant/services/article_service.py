@@ -25,12 +25,12 @@ class ArticleService:
         self,
         page: int = 1,
         page_size: int = 20,
-        search: str = None,
-        nickname: str = None,
-        is_deleted: str = None,
-        is_downloaded: str = None,
-        start_date: str = None,
-        end_date: str = None,
+        search: Optional[str] = None,
+        nickname: Optional[str] = None,
+        is_deleted: Optional[str] = None,
+        is_downloaded: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> Tuple[List[Dict[str, Any]], int]:
         """
         获取文章列表（支持筛选和分页）
@@ -218,7 +218,7 @@ class ArticleService:
                 return False, "公众号不存在", 0
 
             # 更新采集状态
-            account.collect_status = "采集中"
+            account.collect_status = "采集中"  # type: ignore[assignment]
             db.commit()
 
             # 构造请求参数
@@ -256,7 +256,7 @@ class ArticleService:
             result = response.json()
 
             if result.get("base_resp", {}).get("ret") != 0:
-                account.collect_status = "失败"
+                account.collect_status = "失败"  # type: ignore[assignment]
                 db.commit()
                 error_msg = result.get("base_resp", {}).get("err_msg", "未知错误")
                 return False, f"采集失败: {error_msg}", 0
@@ -265,8 +265,8 @@ class ArticleService:
             count = self._parse_and_save_articles(db, account, result)
 
             # 更新采集状态和起始位置
-            account.collect_status = "已采集"
-            account.begin += account.count
+            account.collect_status = "已采集"  # type: ignore[assignment]
+            account.begin += account.count  # type: ignore[assignment]
             db.commit()
 
             collect_logger.info(f"采集成功: {account.nickname}, 数量: {count}")
@@ -275,7 +275,7 @@ class ArticleService:
         except Exception as e:
             collect_logger.error(f"采集文章失败: {e}")
             if account and db:
-                account.collect_status = "失败"
+                account.collect_status = "失败"  # type: ignore[assignment]
                 db.commit()
             return False, f"采集失败: {str(e)}", 0
         finally:

@@ -2,11 +2,11 @@
 
 import json
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from ..config import config
 from ..utils.file_helper import (
@@ -24,7 +24,7 @@ class DownloadService:
         self.download_dir = config.DOWNLOAD_DIR
 
     def _download_and_replace_image(
-        self, img_url: str, img_index: int, article_url: str, download_dir: Path, assets_dir: Path
+        self, img_url: str, img_index: Any, article_url: str, download_dir: Path, assets_dir: Path
     ) -> Optional[str]:
         """
         下载单张图片并返回本地相对路径
@@ -84,7 +84,7 @@ class DownloadService:
         article_url: str,
         article_title: str,
         account_name: str = "未分类",
-        save_dir: Path = None,
+        save_dir: Optional[Path] = None,
     ) -> Tuple[bool, str]:
         """
         下载单篇文章（包含HTML、图片、CSS等资源）
@@ -120,7 +120,7 @@ class DownloadService:
 
             # 优先尝试从 <title> 标签提取
             title_tag = soup.find("title")
-            if title_tag and title_tag.string:
+            if isinstance(title_tag, Tag) and title_tag.string:
                 extracted_title = title_tag.string.strip()
                 download_logger.info(f"从 <title> 标签提取标题: {extracted_title}")
 
@@ -140,7 +140,7 @@ class DownloadService:
 
             # === 确保HTML头中有正确的编码声明 ===
             head = soup.find("head")
-            if head:
+            if isinstance(head, Tag):
                 # 移除旧的charset，避免冲突
                 for meta_tag in head.find_all("meta", attrs={"charset": True}):
                     meta_tag.decompose()
@@ -152,7 +152,7 @@ class DownloadService:
 
             # === 强制显示文章内容 ===
             content_div = soup.find("div", id="js_content")
-            if content_div and content_div.has_attr("style"):
+            if isinstance(content_div, Tag) and content_div.has_attr("style"):
                 del content_div["style"]
                 download_logger.info("强制显示文章内容")
 
@@ -163,75 +163,77 @@ class DownloadService:
 
             # === 下载并替换CSS ===
             for link in soup.find_all("link", rel="stylesheet"):
-                css_url = link.get("href")
-                if not css_url:
-                    continue
+                if isinstance(link, Tag):
+                    css_url = link.get("href")
+                    if not css_url or not isinstance(css_url, str):
+                        continue
 
-                css_url = urljoin(article_url, css_url)
-                try:
-                    css_response = requests.get(css_url, timeout=15)
-                    if css_response.status_code == 200:
-                        css_filename = Path(css_url).name or "style.css"
-                        css_filename = f"{Path(css_filename).stem}_{hash(css_url) % 10000}{Path(css_filename).suffix}"
-                        css_path = assets_dir / css_filename
+                    css_url = urljoin(article_url, css_url)
+                    try:
+                        css_response = requests.get(css_url, timeout=15)
+                        if css_response.status_code == 200:
+                            css_filename = Path(css_url).name or "style.css"
+                            css_filename = f"{Path(css_filename).stem}_{hash(css_url) % 10000}{Path(css_filename).suffix}"
+                            css_path = assets_dir / css_filename
 
-                        with open(css_path, "w", encoding="utf-8") as f:
-                            f.write(css_response.text)
+                            with open(css_path, "w", encoding="utf-8") as f:
+                                f.write(css_response.text)
 
-                        relative_css_path = css_path.relative_to(account_dir)
-                        link["href"] = relative_css_path.as_posix()
-                        download_logger.info(f"下载CSS成功: {css_filename}")
-                except Exception as e:
-                    download_logger.warning(f"下载CSS失败: {css_url}, 错误: {e}")
+                            relative_css_path = css_path.relative_to(account_dir)
+                            link["href"] = relative_css_path.as_posix()
+                            download_logger.info(f"下载CSS成功: {css_filename}")
+                    except Exception as e:
+                        download_logger.warning(f"下载CSS失败: {css_url}, 错误: {e}")
 
             # === 下载并替换图片 ===
             img_tags = soup.find_all("img")
             for i, img in enumerate(img_tags):
-                # 优先处理 data-src，其次是 src
-                img_url = img.get("data-src") or img.get("src")
-                srcset = img.get("srcset")
+                if isinstance(img, Tag):
+                    # 优先处理 data-src，其次是 src
+                    img_url = img.get("data-src") or img.get("src")
+                    srcset = img.get("srcset")
 
-                if not img_url and not srcset:
-                    continue
+                    if not img_url and not srcset:
+                        continue
 
-                # 处理主图片 (src/data-src)
-                if img_url:
-                    local_img_path = self._download_and_replace_image(
-                        img_url, i, article_url, account_dir, assets_dir
-                    )
-                    if local_img_path:
-                        img["src"] = local_img_path
-                        # 确保 data-src 也被更新或移除
-                        if img.has_attr("data-src"):
-                            img["data-src"] = local_img_path
-
-                # 处理 srcset
-                if srcset:
-                    new_srcset = []
-                    for part in srcset.split(","):
-                        part = part.strip()
-                        if not part:
-                            continue
-
-                        url_part = part.split()[0]
-                        descriptor = part.split()[1] if len(part.split()) > 1 else ""
-
-                        local_path = self._download_and_replace_image(
-                            url_part,
-                            f"{i}_{descriptor.replace(' ', '')}",
-                            article_url,
-                            account_dir,
-                            assets_dir,
+                    # 处理主图片 (src/data-src)
+                    if isinstance(img_url, str):
+                        local_img_path = self._download_and_replace_image(
+                            img_url, i, article_url, account_dir, assets_dir
                         )
-                        if local_path:
-                            new_srcset.append(f"{local_path} {descriptor}")
+                        if local_img_path:
+                            img["src"] = local_img_path
+                            # 确保 data-src 也被更新或移除
+                            if img.has_attr("data-src"):
+                                img["data-src"] = local_img_path
 
-                    if new_srcset:
-                        img["srcset"] = ", ".join(new_srcset)
+                    # 处理 srcset
+                    if isinstance(srcset, str):
+                        new_srcset = []
+                        for part in srcset.split(","):
+                            part = part.strip()
+                            if not part:
+                                continue
+
+                            url_part = part.split()[0]
+                            descriptor = part.split()[1] if len(part.split()) > 1 else ""
+
+                            local_path = self._download_and_replace_image(
+                                url_part,
+                                f"{i}_{descriptor.replace(' ', '')}",
+                                article_url,
+                                account_dir,
+                                assets_dir,
+                            )
+                            if local_path:
+                                new_srcset.append(f"{local_path} {descriptor}")
+
+                        if new_srcset:
+                            img["srcset"] = ", ".join(new_srcset)
 
             # === 移除所有外部脚本，保留内联脚本 ===
             for script in soup.find_all("script"):
-                if script.has_attr("src"):
+                if isinstance(script, Tag) and script.has_attr("src"):
                     script.decompose()
 
             # 保存修改后的HTML
@@ -253,7 +255,7 @@ class DownloadService:
             return False, error_msg
 
     def download_articles_batch(
-        self, articles: List[dict], save_dir: Path = None
+        self, articles: List[dict], save_dir: Optional[Path] = None
     ) -> Tuple[int, int, List[str]]:
         """
         批量下载文章
@@ -274,6 +276,11 @@ class DownloadService:
             title = article.get("title") or article.get("article_title")
             account = article.get("account_name") or article.get("nickname", "未分类")
 
+            if not isinstance(url, str) or not isinstance(title, str):
+                fail_count += 1
+                errors.append(f"无效的文章数据: {article}")
+                continue
+
             success, msg = self.download_article(url, title, account, save_dir)
             if success:
                 success_count += 1
@@ -285,7 +292,7 @@ class DownloadService:
         return success_count, fail_count, errors
 
     def download_from_file(
-        self, file_path: str, save_dir: Path = None
+        self, file_path: str, save_dir: Optional[Path] = None
     ) -> Tuple[int, int, List[str]]:
         """
         从文件读取URL列表并下载
