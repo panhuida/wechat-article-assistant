@@ -1,7 +1,7 @@
 """公众号管理服务"""
 
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
+from typing import Any, Dict, List, Optional
+
 from ..models import WechatAccount, get_db
 from ..utils.logger import app_logger
 from ..utils.validators import validate_required

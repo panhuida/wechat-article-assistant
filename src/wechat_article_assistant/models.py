@@ -1,9 +1,9 @@
 """数据模型定义"""
 
 from datetime import datetime
-from typing import Optional
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
 from .config import config
 

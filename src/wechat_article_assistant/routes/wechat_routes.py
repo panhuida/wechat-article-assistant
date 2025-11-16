@@ -1,10 +1,11 @@
 """公众号管理路由"""
 
-from flask import Blueprint, request, jsonify, render_template
-from ..services.wechat_service import WechatService
+import requests
+from flask import Blueprint, jsonify, request
+
 from ..browser.wechat_login import WechatLogin
 from ..config import config
-import requests
+from ..services.wechat_service import WechatService
 
 wechat_bp = Blueprint("wechat", __name__, url_prefix="/api/wechat")
 wechat_service = WechatService()

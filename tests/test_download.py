@@ -6,8 +6,8 @@ from pathlib import Path
 # 添加src目录到路径
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from wechat_article_assistant.services.download_service import DownloadService
 from wechat_article_assistant.config import config
+from wechat_article_assistant.services.download_service import DownloadService
 
 
 def test_download():

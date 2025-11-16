@@ -1,6 +1,7 @@
 """文章管理路由"""
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
+
 from ..services.article_service import ArticleService
 from ..services.download_service import DownloadService
 

@@ -1,11 +1,10 @@
 """命令行工具"""
 
-import sys
 import argparse
+import sys
 from pathlib import Path
+
 from .services.download_service import DownloadService
-from .utils.logger import download_logger
-from .config import config
 
 
 def main():

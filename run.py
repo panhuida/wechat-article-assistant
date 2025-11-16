@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("微信公众号文章阅读助手")
     print("=" * 60)
-    print(f"服务地址: http://127.0.0.1:5000")
+    print("服务地址: http://127.0.0.1:5000")
     print(f"调试模式: {config.DEBUG}")
     print("=" * 60)
     print()

@@ -1,11 +1,12 @@
 """微信公众平台登录处理模块"""
 
 import time
-from typing import Optional, Dict, Any
-from .browser_manager import BrowserManager
-from .session_manager import SessionManager
+from typing import Optional
+
 from ..config import config
 from ..utils.logger import app_logger
+from .browser_manager import BrowserManager
+from .session_manager import SessionManager
 
 
 class WechatLogin:

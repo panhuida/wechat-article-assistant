@@ -1,8 +1,9 @@
 """pytest配置文件"""
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # 添加src目录到Python路径
 src_path = Path(__file__).parent.parent / "src"
@@ -28,7 +29,7 @@ def client(app):
 @pytest.fixture
 def db():
     """创建测试数据库"""
-    from wechat_article_assistant.models import init_db, get_db
+    from wechat_article_assistant.models import get_db, init_db
 
     init_db()
     return get_db()

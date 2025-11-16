@@ -1,9 +1,9 @@
 """二维码生成工具"""
 
-import qrcode
-from io import BytesIO
 import base64
-from typing import Optional
+from io import BytesIO
+
+import qrcode
 
 
 def generate_qr_code(data: str, size: int = 300) -> str:

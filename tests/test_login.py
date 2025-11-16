@@ -9,7 +9,6 @@ src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
 from wechat_article_assistant.browser.wechat_login import WechatLogin
-from wechat_article_assistant.utils.logger import app_logger
 
 
 def test_login():
@@ -32,7 +31,7 @@ def test_login():
         qr_url = login.get_qr_code_url()
 
         if qr_url:
-            print(f"   ✓ 二维码URL获取成功")
+            print("   ✓ 二维码URL获取成功")
             print(f"   URL: {qr_url[:100]}...")
             print()
             print("3. 等待扫码登录...")

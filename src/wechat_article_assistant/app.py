@@ -1,10 +1,11 @@
 """Flask应用入口"""
 
 from flask import Flask, render_template
+
 from .config import config
 from .models import init_db
-from .routes.wechat_routes import wechat_bp
 from .routes.article_routes import article_bp
+from .routes.wechat_routes import wechat_bp
 from .utils.logger import app_logger
 
 

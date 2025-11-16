@@ -3,7 +3,6 @@
 import os
 import re
 from pathlib import Path
-from typing import Optional
 
 
 def sanitize_filename(filename: str) -> str:

@@ -18,7 +18,7 @@ def check_environment():
     if py_version >= (3, 12):
         print("   ✓ 版本符合要求 (>= 3.12)")
     else:
-        print(f"   ✗ 版本过低，需要 Python 3.12+")
+        print("   ✗ 版本过低，需要 Python 3.12+")
     print()
 
     # 检查依赖包
@@ -38,10 +38,10 @@ def check_environment():
         try:
             if package == "bs4":
                 __import__("bs4")
-                print(f"   ✓ beautifulsoup4")
+                print("   ✓ beautifulsoup4")
             elif package == "PIL":
                 __import__("PIL")
-                print(f"   ✓ pillow")
+                print("   ✓ pillow")
             elif package == "python-dotenv":
                 __import__("dotenv")
                 print(f"   ✓ {package}")
@@ -63,7 +63,7 @@ def check_environment():
                 browser.close()
                 print("   ✓ Chromium浏览器已安装")
             except Exception as e:
-                print(f"   ✗ Chromium浏览器未安装或无法启动")
+                print("   ✗ Chromium浏览器未安装或无法启动")
                 print(f"   错误: {e}")
                 print("   解决方法: 运行 playwright install chromium")
     except ImportError:
@@ -80,10 +80,10 @@ def check_environment():
         else:
             print(f"   ✗ {dir_name}/ - 不存在")
             if dir_name in ["data", "logs"]:
-                print(f"      尝试创建...")
+                print("      尝试创建...")
                 try:
                     dir_path.mkdir(parents=True, exist_ok=True)
-                    print(f"      ✓ 已创建")
+                    print("      ✓ 已创建")
                 except Exception as e:
                     print(f"      ✗ 创建失败: {e}")
     print()
@@ -110,7 +110,7 @@ def check_environment():
         else:
             print(f"   ⚠ 访问微信公众平台返回状态码: {response.status_code}")
     except Exception as e:
-        print(f"   ✗ 无法访问微信公众平台")
+        print("   ✗ 无法访问微信公众平台")
         print(f"   错误: {e}")
     print()
 

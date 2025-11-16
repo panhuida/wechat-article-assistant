@@ -1,20 +1,19 @@
 """文章下载服务"""
 
-import re
 import json
-import requests
 from pathlib import Path
-from typing import Optional, List, Tuple
-from bs4 import BeautifulSoup
+from typing import List, Optional, Tuple
 from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
+
 from ..config import config
-from ..utils.logger import download_logger
 from ..utils.file_helper import (
-    sanitize_filename,
     ensure_dir,
-    get_file_extension,
-    get_unique_filename,
+    sanitize_filename,
 )
+from ..utils.logger import download_logger
 
 
 class DownloadService:
@@ -155,7 +154,7 @@ class DownloadService:
             content_div = soup.find("div", id="js_content")
             if content_div and content_div.has_attr("style"):
                 del content_div["style"]
-                download_logger.info(f"强制显示文章内容")
+                download_logger.info("强制显示文章内容")
 
             # 创建文章和图片文件夹
             base_filename = sanitize_filename(article_title)

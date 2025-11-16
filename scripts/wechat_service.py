@@ -1,25 +1,21 @@
-import requests
 import json
-import time
-import traceback
 import logging
 import os
 import re
-from pathlib import Path
+import time
+import traceback
 from datetime import datetime
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_not_exception_type
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
-from markdownify import markdownify as md
-from collections import deque
-
-from app.models import WechatList, WechatArticleList
-from app.extensions import db
+from pathlib import Path
 from threading import Thread
+from urllib.parse import urljoin
+
+import requests
 from app.config import Config
-from app.services.ingestion_manager import run_local_ingestion
+from app.extensions import db
+from app.models import Document, WechatArticleList, WechatList
 from app.services.converters import convert_to_markdown
-from app.models import Document, ConversionType
+from bs4 import BeautifulSoup
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_fixed
 
 logger = logging.getLogger(__name__)
 
