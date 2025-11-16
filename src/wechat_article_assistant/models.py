@@ -1,12 +1,14 @@
 """数据模型定义"""
 
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Any
+from typing import Generator
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 
 from .config import config
+
 
 # 创建基类
 class Base(DeclarativeBase):
@@ -20,13 +22,28 @@ engine = create_engine(config.DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
-def get_db() -> Session:
-    """获取数据库会话"""
+@contextmanager
+def get_db() -> Generator[Session, None, None]:
+    """
+    获取数据库会话（上下文管理器）
+
+    使用方式:
+        with get_db() as db:
+            # 数据库操作
+            pass
+
+    Yields:
+        Session: 数据库会话对象
+    """
     db = SessionLocal()
     try:
-        return db
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
-        pass
+        db.close()
 
 
 class WechatAccount(Base):

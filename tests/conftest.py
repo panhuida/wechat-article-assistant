@@ -28,8 +28,9 @@ def client(app):
 
 @pytest.fixture
 def db():
-    """创建测试数据库"""
+    """创建测试数据库会话"""
     from wechat_article_assistant.models import get_db, init_db
 
     init_db()
-    return get_db()
+    with get_db() as session:
+        yield session
