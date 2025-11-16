@@ -31,8 +31,7 @@ def setup_logger(name: str, log_file: str = None, level: str = None) -> logging.
 
     # 日志格式
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
     # 控制台处理器
@@ -49,7 +48,7 @@ def setup_logger(name: str, log_file: str = None, level: str = None) -> logging.
             file_path,
             maxBytes=10 * 1024 * 1024,  # 10MB
             backupCount=5,
-            encoding="utf-8"
+            encoding="utf-8",
         )
         file_handler.setLevel(log_level)
         file_handler.setFormatter(formatter)

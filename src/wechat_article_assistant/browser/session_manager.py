@@ -20,13 +20,15 @@ class SessionManager:
         """
         self.session_file = session_file or config.SESSION_FILE
         self.session_file.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # 缓存会话数据，避免频繁读取文件
         self._cached_session: Optional[Dict[str, Any]] = None
         self._cache_time: float = 0
         self._cache_ttl: int = 300  # 缓存5分钟
 
-    def save_session(self, cookies: list, token: str = None, other_data: Dict[str, Any] = None) -> bool:
+    def save_session(
+        self, cookies: list, token: str = None, other_data: Dict[str, Any] = None
+    ) -> bool:
         """
         保存会话数据
 
@@ -39,18 +41,14 @@ class SessionManager:
             是否保存成功
         """
         try:
-            session_data = {
-                "cookies": cookies,
-                "token": token,
-                "other_data": other_data or {}
-            }
+            session_data = {"cookies": cookies, "token": token, "other_data": other_data or {}}
             with open(self.session_file, "w", encoding="utf-8") as f:
                 json.dump(session_data, f, ensure_ascii=False, indent=2)
-            
+
             # 更新缓存
             self._cached_session = session_data
             self._cache_time = time.time()
-            
+
             app_logger.info(f"会话数据已保存到: {self.session_file}")
             return True
         except Exception as e:
@@ -74,7 +72,7 @@ class SessionManager:
                 if cache_age < self._cache_ttl:
                     app_logger.debug(f"使用缓存的会话数据（缓存年龄: {cache_age:.1f}秒）")
                     return self._cached_session
-            
+
             # 缓存失效或强制重新加载
             if not self.session_file.exists():
                 app_logger.warning("会话文件不存在")
@@ -83,11 +81,11 @@ class SessionManager:
 
             with open(self.session_file, "r", encoding="utf-8") as f:
                 session_data = json.load(f)
-            
+
             # 更新缓存
             self._cached_session = session_data
             self._cache_time = time.time()
-            
+
             app_logger.info("会话数据加载成功")
             return session_data
         except Exception as e:
@@ -106,16 +104,16 @@ class SessionManager:
             if self.session_file.exists():
                 self.session_file.unlink()
                 app_logger.info("会话数据已清除")
-            
+
             # 清除缓存
             self._cached_session = None
             self._cache_time = 0
-            
+
             return True
         except Exception as e:
             app_logger.error(f"清除会话数据失败: {e}")
             return False
-    
+
     def invalidate_cache(self):
         """
         使缓存失效（强制下次加载时重新读取文件）

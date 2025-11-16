@@ -19,7 +19,9 @@ class Config:
     DEBUG = os.getenv("FLASK_DEBUG", "False").lower() == "true"
 
     # 数据库配置
-    DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'data' / 'wechat_assistant.db'}")
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL", f"sqlite:///{BASE_DIR / 'data' / 'wechat_assistant.db'}"
+    )
 
     # 日志配置
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

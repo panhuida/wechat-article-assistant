@@ -28,7 +28,7 @@ class ArticleService:
         is_deleted: str = None,
         is_downloaded: str = None,
         start_date: str = None,
-        end_date: str = None
+        end_date: str = None,
     ) -> Tuple[List[Dict[str, Any]], int]:
         """
         获取文章列表（支持筛选和分页）
@@ -55,7 +55,7 @@ class ArticleService:
                 query = query.filter(
                     or_(
                         WechatArticle.nickname.like(f"%{search}%"),
-                        WechatArticle.article_author_name.like(f"%{search}%")
+                        WechatArticle.article_author_name.like(f"%{search}%"),
                     )
                 )
 
@@ -80,7 +80,12 @@ class ArticleService:
 
             # 分页
             offset = (page - 1) * page_size
-            articles = query.order_by(WechatArticle.article_create_time.desc()).offset(offset).limit(page_size).all()
+            articles = (
+                query.order_by(WechatArticle.article_create_time.desc())
+                .offset(offset)
+                .limit(page_size)
+                .all()
+            )
 
             return [article.to_dict() for article in articles], total
 
@@ -122,7 +127,11 @@ class ArticleService:
         """
         try:
             db = get_db()
-            deleted = db.query(WechatArticle).filter(WechatArticle.id.in_(article_ids)).delete(synchronize_session=False)
+            deleted = (
+                db.query(WechatArticle)
+                .filter(WechatArticle.id.in_(article_ids))
+                .delete(synchronize_session=False)
+            )
             db.commit()
 
             app_logger.info(f"删除文章成功，数量: {deleted}")
@@ -148,8 +157,7 @@ class ArticleService:
         try:
             db = get_db()
             db.query(WechatArticle).filter(WechatArticle.id.in_(article_ids)).update(
-                {"is_downloaded": "是"},
-                synchronize_session=False
+                {"is_downloaded": "是"}, synchronize_session=False
             )
             db.commit()
             return True
@@ -176,15 +184,17 @@ class ArticleService:
             session_data = self.session_manager.load_session()
             if not session_data:
                 return False, "请先登录微信公众平台", 0
-            
+
             # 调用内部方法执行采集
             return self._collect_single_page_with_session(account_id, session_data)
-            
+
         except Exception as e:
             collect_logger.error(f"采集文章失败: {e}")
             return False, f"采集失败: {str(e)}", 0
 
-    def _collect_single_page_with_session(self, account_id: int, session_data: dict) -> Tuple[bool, str, int]:
+    def _collect_single_page_with_session(
+        self, account_id: int, session_data: dict
+    ) -> Tuple[bool, str, int]:
         """
         使用已有会话采集单页文章（内部方法）
 
@@ -197,7 +207,7 @@ class ArticleService:
         """
         db = None
         account = None
-        
+
         try:
             db = get_db()
             account = db.query(WechatAccount).filter(WechatAccount.id == account_id).first()
@@ -224,11 +234,13 @@ class ArticleService:
                 "token": session_data.get("token", ""),
                 "lang": "zh_CN",
                 "f": "json",
-                "ajax": "1"
+                "ajax": "1",
             }
 
             # 构造请求头和cookies
-            cookies = {cookie["name"]: cookie["value"] for cookie in session_data.get("cookies", [])}
+            cookies = {
+                cookie["name"]: cookie["value"] for cookie in session_data.get("cookies", [])
+            }
 
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -236,7 +248,9 @@ class ArticleService:
             }
 
             # 发送请求
-            response = requests.get(url, params=params, cookies=cookies, headers=headers, timeout=30)
+            response = requests.get(
+                url, params=params, cookies=cookies, headers=headers, timeout=30
+            )
             result = response.json()
 
             if result.get("base_resp", {}).get("ret") != 0:
@@ -282,33 +296,37 @@ class ArticleService:
             session_data = self.session_manager.load_session()
             if not session_data:
                 return False, "请先登录微信公众平台", 0
-            
+
             collect_logger.info("会话加载成功，开始循环采集")
-            
+
             total_count = 0
             page = 1
-            
+
             while True:
                 collect_logger.info(f"采集第 {page} 页...")
-                success, msg, count = self._collect_single_page_with_session(account_id, session_data)
-                
+                success, msg, count = self._collect_single_page_with_session(
+                    account_id, session_data
+                )
+
                 if not success:
                     collect_logger.error(f"采集失败: {msg}")
                     return False, msg, total_count
 
                 total_count += count
-                collect_logger.info(f"第 {page} 页采集成功，本页: {count} 篇，累计: {total_count} 篇")
+                collect_logger.info(
+                    f"第 {page} 页采集成功，本页: {count} 篇，累计: {total_count} 篇"
+                )
 
                 # 如果本次采集数量为0，说明已经采集完毕
                 if count == 0:
                     collect_logger.info("没有更多文章，采集完成")
                     break
-                
+
                 page += 1
 
             collect_logger.info(f"全部采集完成，总数: {total_count}")
             return True, f"采集完成，共 {total_count} 篇文章", total_count
-            
+
         except Exception as e:
             collect_logger.error(f"全部采集失败: {e}")
             return False, f"采集失败: {str(e)}", 0
@@ -339,9 +357,7 @@ class ArticleService:
                 for appmsg in appmsgex_list:
                     # 检查文章是否已存在
                     aid = appmsg.get("aid", "")
-                    exists = db.query(WechatArticle).filter(
-                        WechatArticle.article_id == aid
-                    ).first()
+                    exists = db.query(WechatArticle).filter(WechatArticle.article_id == aid).first()
 
                     if exists:
                         continue
@@ -358,7 +374,7 @@ class ArticleService:
                         article_is_deleted="是" if appmsg.get("is_deleted", False) else "否",
                         article_create_time=datetime.fromtimestamp(appmsg.get("create_time", 0)),
                         article_update_time=datetime.fromtimestamp(appmsg.get("update_time", 0)),
-                        is_downloaded="否"
+                        is_downloaded="否",
                     )
 
                     db.add(article)

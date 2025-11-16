@@ -29,16 +29,12 @@ def get_articles():
         is_deleted=is_deleted if is_deleted else None,
         is_downloaded=is_downloaded if is_downloaded else None,
         start_date=start_date if start_date else None,
-        end_date=end_date if end_date else None
+        end_date=end_date if end_date else None,
     )
 
-    return jsonify({
-        "success": True,
-        "data": articles,
-        "total": total,
-        "page": page,
-        "pageSize": page_size
-    })
+    return jsonify(
+        {"success": True, "data": articles, "total": total, "page": page, "pageSize": page_size}
+    )
 
 
 @article_bp.route("/<int:article_id>", methods=["GET"])
@@ -103,13 +99,15 @@ def download_articles():
     if success_count > 0:
         article_service.mark_as_downloaded(article_ids)
 
-    return jsonify({
-        "success": True,
-        "message": f"下载完成: 成功 {success_count} 篇, 失败 {fail_count} 篇",
-        "successCount": success_count,
-        "failCount": fail_count,
-        "errors": errors
-    })
+    return jsonify(
+        {
+            "success": True,
+            "message": f"下载完成: 成功 {success_count} 篇, 失败 {fail_count} 篇",
+            "successCount": success_count,
+            "failCount": fail_count,
+            "errors": errors,
+        }
+    )
 
 
 @article_bp.route("/names", methods=["GET"])

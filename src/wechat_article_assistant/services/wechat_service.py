@@ -70,9 +70,11 @@ class WechatService:
 
             # 检查是否已存在
             if account_data.get("fakeid"):
-                exists = db.query(WechatAccount).filter(
-                    WechatAccount.fakeid == account_data["fakeid"]
-                ).first()
+                exists = (
+                    db.query(WechatAccount)
+                    .filter(WechatAccount.fakeid == account_data["fakeid"])
+                    .first()
+                )
                 if exists:
                     return False, "该公众号已存在", None
 
@@ -88,7 +90,7 @@ class WechatService:
                 memo=account_data.get("memo"),
                 begin=account_data.get("begin", 0),
                 count=account_data.get("count", 5),
-                collect_status="未采集"
+                collect_status="未采集",
             )
 
             db.add(account)

@@ -44,7 +44,9 @@ class WechatAccount(Base):
     count = Column(Integer, default=5, nullable=True, comment="单页采集数量")
     collect_status = Column(String(50), default="未采集", nullable=True, comment="采集状态")
     create_time = Column(DateTime, default=datetime.now, nullable=True, comment="创建时间")
-    update_time = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=True, comment="更新时间")
+    update_time = Column(
+        DateTime, default=datetime.now, onupdate=datetime.now, nullable=True, comment="更新时间"
+    )
 
     # 关联文章
     articles = relationship("WechatArticle", back_populates="account")
@@ -64,8 +66,12 @@ class WechatAccount(Base):
             "begin": self.begin,
             "count": self.count,
             "collect_status": self.collect_status,
-            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S") if self.create_time else None,
-            "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S") if self.update_time else None,
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S")
+            if self.create_time
+            else None,
+            "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
+            if self.update_time
+            else None,
         }
 
 
@@ -75,7 +81,9 @@ class WechatArticle(Base):
     __tablename__ = "wechat_article_list"
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="序号")
-    wechat_list_id = Column(Integer, ForeignKey("wechat_list.id"), nullable=True, comment="公众号列表ID")
+    wechat_list_id = Column(
+        Integer, ForeignKey("wechat_list.id"), nullable=True, comment="公众号列表ID"
+    )
     nickname = Column(String(50), nullable=True, comment="公众号名称")
     article_id = Column(String(50), nullable=True, comment="文章ID")
     article_title = Column(String(100), nullable=True, comment="文章标题")
@@ -87,7 +95,9 @@ class WechatArticle(Base):
     article_update_time = Column(DateTime, nullable=True, comment="文章更新时间")
     is_downloaded = Column(String(10), default="否", nullable=True, comment="是否下载")
     create_time = Column(DateTime, default=datetime.now, nullable=True, comment="创建时间")
-    update_time = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=True, comment="更新时间")
+    update_time = Column(
+        DateTime, default=datetime.now, onupdate=datetime.now, nullable=True, comment="更新时间"
+    )
 
     # 关联公众号
     account = relationship("WechatAccount", back_populates="articles")
@@ -104,11 +114,19 @@ class WechatArticle(Base):
             "article_link": self.article_link,
             "article_author_name": self.article_author_name,
             "article_is_deleted": self.article_is_deleted,
-            "article_create_time": self.article_create_time.strftime("%Y-%m-%d %H:%M:%S") if self.article_create_time else None,
-            "article_update_time": self.article_update_time.strftime("%Y-%m-%d %H:%M:%S") if self.article_update_time else None,
+            "article_create_time": self.article_create_time.strftime("%Y-%m-%d %H:%M:%S")
+            if self.article_create_time
+            else None,
+            "article_update_time": self.article_update_time.strftime("%Y-%m-%d %H:%M:%S")
+            if self.article_update_time
+            else None,
             "is_downloaded": self.is_downloaded,
-            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S") if self.create_time else None,
-            "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S") if self.update_time else None,
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S")
+            if self.create_time
+            else None,
+            "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
+            if self.update_time
+            else None,
         }
 
 

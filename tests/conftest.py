@@ -13,6 +13,7 @@ sys.path.insert(0, str(src_path))
 def app():
     """创建测试Flask应用"""
     from wechat_article_assistant.app import create_app
+
     app = create_app()
     app.config["TESTING"] = True
     return app
@@ -28,5 +29,6 @@ def client(app):
 def db():
     """创建测试数据库"""
     from wechat_article_assistant.models import init_db, get_db
+
     init_db()
     return get_db()

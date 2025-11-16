@@ -79,7 +79,7 @@ def search_account():
             "token": session_data.get("token", ""),
             "lang": "zh_CN",
             "f": "json",
-            "ajax": 1
+            "ajax": 1,
         }
 
         cookies = {cookie["name"]: cookie["value"] for cookie in session_data.get("cookies", [])}
