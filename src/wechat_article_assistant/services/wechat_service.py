@@ -3,7 +3,9 @@
 from typing import Any, Dict, List, Optional
 
 from ..models import WechatAccount, get_db
-from ..utils.logger import app_logger
+from ..utils.logger import get_module_logger
+
+logger = get_module_logger(__name__)
 from ..utils.validators import validate_required
 
 
@@ -26,7 +28,7 @@ class WechatService:
                 accounts = db.query(WechatAccount).order_by(WechatAccount.update_time.desc()).all()
                 return [account.to_dict() for account in accounts]
         except Exception as e:
-            app_logger.error(f"获取公众号列表失败: {e}")
+            logger.error(f"获取公众号列表失败: {e}")
             return []
 
     def get_account_by_id(self, account_id: int) -> Optional[Dict[str, Any]]:
@@ -44,7 +46,7 @@ class WechatService:
                 account = db.query(WechatAccount).filter(WechatAccount.id == account_id).first()
                 return account.to_dict() if account else None
         except Exception as e:
-            app_logger.error(f"获取公众号失败: {e}")
+            logger.error(f"获取公众号失败: {e}")
             return None
 
     def create_account(self, account_data: Dict[str, Any]) -> tuple[bool, str, Optional[int]]:
@@ -92,11 +94,11 @@ class WechatService:
                 db.commit()
                 db.refresh(account)
 
-                app_logger.info(f"创建公众号成功: {account.nickname}")
+                logger.info(f"创建公众号成功: {account.nickname}")
                 return True, "创建成功", int(account.id)
 
         except Exception as e:
-            app_logger.error(f"创建公众号失败: {e}")
+            logger.error(f"创建公众号失败: {e}")
             return False, f"创建失败: {str(e)}", None
 
     def update_account(self, account_id: int, account_data: Dict[str, Any]) -> tuple[bool, str]:
@@ -123,11 +125,11 @@ class WechatService:
                         setattr(account, key, value)
 
                 db.commit()
-                app_logger.info(f"更新公众号成功: {account.nickname}")
+                logger.info(f"更新公众号成功: {account.nickname}")
                 return True, "更新成功"
 
         except Exception as e:
-            app_logger.error(f"更新公众号失败: {e}")
+            logger.error(f"更新公众号失败: {e}")
             return False, f"更新失败: {str(e)}"
 
     def delete_account(self, account_id: int) -> tuple[bool, str]:
@@ -151,11 +153,11 @@ class WechatService:
                 db.delete(account)
                 db.commit()
 
-                app_logger.info(f"删除公众号成功: {nickname}")
+                logger.info(f"删除公众号成功: {nickname}")
                 return True, "删除成功"
 
         except Exception as e:
-            app_logger.error(f"删除公众号失败: {e}")
+            logger.error(f"删除公众号失败: {e}")
             return False, f"删除失败: {str(e)}"
 
     def update_collect_status(self, account_id: int, status: str) -> bool:
@@ -180,7 +182,7 @@ class WechatService:
                 return False
 
         except Exception as e:
-            app_logger.error(f"更新采集状态失败: {e}")
+            logger.error(f"更新采集状态失败: {e}")
             return False
 
     def update_begin_position(self, account_id: int, begin: int) -> bool:
@@ -205,5 +207,5 @@ class WechatService:
                 return False
 
         except Exception as e:
-            app_logger.error(f"更新采集位置失败: {e}")
+            logger.error(f"更新采集位置失败: {e}")
             return False

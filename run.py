@@ -19,4 +19,4 @@ if __name__ == "__main__":
     print("=" * 60)
     print()
 
-    app.run(host="0.0.0.0", port=5000, debug=config.DEBUG, threaded=False)
+    app.run(host="0.0.0.0", port=5000, debug=config.DEBUG, use_reloader=False)

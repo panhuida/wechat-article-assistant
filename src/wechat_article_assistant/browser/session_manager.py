@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional, cast
 
 from ..config import config
-from ..utils.logger import app_logger
+from ..utils.logger import get_module_logger
+
+logger = get_module_logger(__name__)
 
 
 class SessionManager:
@@ -50,10 +52,10 @@ class SessionManager:
             self._cached_session = session_data
             self._cache_time = time.time()
 
-            app_logger.info(f"会话数据已保存到: {self.session_file}")
+            logger.info(f"会话数据已保存到: {self.session_file}")
             return True
         except Exception as e:
-            app_logger.error(f"保存会话数据失败: {e}")
+            logger.error(f"保存会话数据失败: {e}")
             return False
 
     def load_session(self, force_reload: bool = False) -> Optional[Dict[str, Any]]:
@@ -71,12 +73,12 @@ class SessionManager:
             if not force_reload and self._cached_session is not None:
                 cache_age = time.time() - self._cache_time
                 if cache_age < self._cache_ttl:
-                    app_logger.debug(f"使用缓存的会话数据（缓存年龄: {cache_age:.1f}秒）")
+                    logger.debug(f"使用缓存的会话数据（缓存年龄: {cache_age:.1f}秒）")
                     return self._cached_session
 
             # 缓存失效或强制重新加载
             if not self.session_file.exists():
-                app_logger.warning("会话文件不存在")
+                logger.warning("会话文件不存在")
                 self._cached_session = None
                 return None
 
@@ -87,10 +89,10 @@ class SessionManager:
             self._cached_session = session_data
             self._cache_time = time.time()
 
-            app_logger.info("会话数据加载成功")
+            logger.info("会话数据加载成功")
             return session_data
         except Exception as e:
-            app_logger.error(f"加载会话数据失败: {e}")
+            logger.error(f"加载会话数据失败: {e}")
             self._cached_session = None
             return None
 
@@ -104,7 +106,7 @@ class SessionManager:
         try:
             if self.session_file.exists():
                 self.session_file.unlink()
-                app_logger.info("会话数据已清除")
+                logger.info("会话数据已清除")
 
             # 清除缓存
             self._cached_session = None
@@ -112,7 +114,7 @@ class SessionManager:
 
             return True
         except Exception as e:
-            app_logger.error(f"清除会话数据失败: {e}")
+            logger.error(f"清除会话数据失败: {e}")
             return False
 
     def invalidate_cache(self):
@@ -121,7 +123,7 @@ class SessionManager:
         """
         self._cached_session = None
         self._cache_time = 0
-        app_logger.debug("会话缓存已失效")
+        logger.debug("会话缓存已失效")
 
     def is_session_valid(self) -> bool:
         """

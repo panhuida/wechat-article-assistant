@@ -13,7 +13,9 @@ from ..utils.file_helper import (
     ensure_dir,
     sanitize_filename,
 )
-from ..utils.logger import download_logger
+from ..utils.logger import get_module_logger
+
+logger = get_module_logger(__name__)
 
 
 class DownloadService:
@@ -72,11 +74,11 @@ class DownloadService:
 
             # 返回相对于下载目录的路径
             relative_img_path = img_path.relative_to(download_dir)
-            download_logger.info(f"下载图片成功: {img_filename}")
+            logger.info(f"下载图片成功: {img_filename}")
             return relative_img_path.as_posix()
 
         except Exception as e:
-            download_logger.warning(f"下载图片失败: {img_url}, 错误: {e}")
+            logger.warning(f"下载图片失败: {img_url}, 错误: {e}")
             return None
 
     def download_article(
@@ -99,7 +101,7 @@ class DownloadService:
             (是否成功, 消息)
         """
         try:
-            download_logger.info(f"开始下载文章: {article_title}")
+            logger.info(f"开始下载文章: {article_title}")
 
             # 创建公众号目录
             base_dir = save_dir or self.download_dir
@@ -122,21 +124,21 @@ class DownloadService:
             title_tag = soup.find("title")
             if isinstance(title_tag, Tag) and title_tag.string:
                 extracted_title = title_tag.string.strip()
-                download_logger.info(f"从 <title> 标签提取标题: {extracted_title}")
+                logger.info(f"从 <title> 标签提取标题: {extracted_title}")
 
             # 如果没有找到或标题为空，尝试从 <h1> 提取
             if not extracted_title:
                 h1_tag = soup.find("h1")
                 if h1_tag:
                     extracted_title = h1_tag.get_text().strip()
-                    download_logger.info(f"从 <h1> 标签提取标题: {extracted_title}")
+                    logger.info(f"从 <h1> 标签提取标题: {extracted_title}")
 
             # 如果成功提取到标题，使用提取的标题替换传入的标题
             if extracted_title:
                 article_title = extracted_title
-                download_logger.info(f"使用提取的标题: {article_title}")
+                logger.info(f"使用提取的标题: {article_title}")
             else:
-                download_logger.warning(f"未能从页面提取标题，使用传入的标题: {article_title}")
+                logger.warning(f"未能从页面提取标题，使用传入的标题: {article_title}")
 
             # === 确保HTML头中有正确的编码声明 ===
             head = soup.find("head")
@@ -148,13 +150,13 @@ class DownloadService:
                 meta_charset_tag = soup.new_tag("meta", charset="UTF-8")
                 head.insert(0, meta_charset_tag)
             else:
-                download_logger.warning(f"文章 '{article_title}' 缺少 <head> 标签")
+                logger.warning(f"文章 '{article_title}' 缺少 <head> 标签")
 
             # === 强制显示文章内容 ===
             content_div = soup.find("div", id="js_content")
             if isinstance(content_div, Tag) and content_div.has_attr("style"):
                 del content_div["style"]
-                download_logger.info("强制显示文章内容")
+                logger.info("强制显示文章内容")
 
             # 创建文章和图片文件夹
             base_filename = sanitize_filename(article_title)
@@ -181,9 +183,9 @@ class DownloadService:
 
                             relative_css_path = css_path.relative_to(account_dir)
                             link["href"] = relative_css_path.as_posix()
-                            download_logger.info(f"下载CSS成功: {css_filename}")
+                            logger.info(f"下载CSS成功: {css_filename}")
                     except Exception as e:
-                        download_logger.warning(f"下载CSS失败: {css_url}, 错误: {e}")
+                        logger.warning(f"下载CSS失败: {css_url}, 错误: {e}")
 
             # === 下载并替换图片 ===
             img_tags = soup.find_all("img")
@@ -246,12 +248,12 @@ class DownloadService:
             with open(meta_path, "w", encoding="utf-8") as f:
                 json.dump(meta_data, f, ensure_ascii=False, indent=4)
 
-            download_logger.info(f"文章下载成功: {article_path}")
+            logger.info(f"文章下载成功: {article_path}")
             return True, f"下载成功，保存至: {article_path}"
 
         except Exception as e:
             error_msg = f"下载文章失败: {e}"
-            download_logger.error(error_msg, exc_info=True)
+            logger.error(error_msg, exc_info=True)
             return False, error_msg
 
     def download_articles_batch(
@@ -288,7 +290,7 @@ class DownloadService:
                 fail_count += 1
                 errors.append(f"{title}: {msg}")
 
-        download_logger.info(f"批量下载完成: 成功 {success_count}, 失败 {fail_count}")
+        logger.info(f"批量下载完成: 成功 {success_count}, 失败 {fail_count}")
         return success_count, fail_count, errors
 
     def download_from_file(
@@ -323,10 +325,10 @@ class DownloadService:
                 urls.append(line)
 
             if not urls:
-                download_logger.warning(f"文件中没有找到有效的URL: {file_path}")
+                logger.warning(f"文件中没有找到有效的URL: {file_path}")
                 return 0, 0, ["文件中没有找到有效的URL"]
 
-            download_logger.info(f"从文件读取到 {len(urls)} 个URL")
+            logger.info(f"从文件读取到 {len(urls)} 个URL")
 
             articles = []
             for idx, url in enumerate(urls):
@@ -336,5 +338,5 @@ class DownloadService:
 
             return self.download_articles_batch(articles, save_dir)
         except Exception as e:
-            download_logger.error(f"从文件下载失败: {e}")
+            logger.error(f"从文件下载失败: {e}")
             return 0, 0, [str(e)]

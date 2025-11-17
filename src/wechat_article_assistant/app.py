@@ -6,7 +6,12 @@ from .config import config
 from .models import init_db
 from .routes.article_routes import article_bp
 from .routes.wechat_routes import wechat_bp
-from .utils.logger import app_logger
+from .utils.logger import get_module_logger, setup_werkzeug_logger
+
+logger = get_module_logger(__name__)
+
+# 初始化werkzeug日志格式
+setup_werkzeug_logger()
 
 
 def create_app():
@@ -20,12 +25,12 @@ def create_app():
 
     # 初始化数据库
     init_db()
-    app_logger.info("数据库初始化完成")
+    logger.info("数据库初始化完成")
 
     # 注册蓝图
     app.register_blueprint(wechat_bp)
     app.register_blueprint(article_bp)
-    app_logger.info("路由注册完成")
+    logger.info("路由注册完成")
 
     # 首页路由
     @app.route("/")
@@ -45,7 +50,7 @@ def create_app():
         """文章列表页"""
         return render_template("article_list.html")
 
-    app_logger.info("Flask应用创建完成")
+    logger.info("Flask应用创建完成")
     return app
 
 

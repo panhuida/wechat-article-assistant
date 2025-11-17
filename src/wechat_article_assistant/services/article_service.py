@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from ..browser.session_manager import SessionManager
 from ..config import config
 from ..models import WechatAccount, WechatArticle, get_db
-from ..utils.logger import app_logger, collect_logger
+from ..utils.logger import get_module_logger
+
+logger = get_module_logger(__name__)
 
 
 class ArticleService:
@@ -92,7 +94,7 @@ class ArticleService:
                 return [article.to_dict() for article in articles], total
 
         except Exception as e:
-            app_logger.error(f"获取文章列表失败: {e}")
+            logger.error(f"获取文章列表失败: {e}")
             return [], 0
 
     def get_article_by_id(self, article_id: int) -> Optional[Dict[str, Any]]:
@@ -110,7 +112,7 @@ class ArticleService:
                 article = db.query(WechatArticle).filter(WechatArticle.id == article_id).first()
                 return article.to_dict() if article else None
         except Exception as e:
-            app_logger.error(f"获取文章失败: {e}")
+            logger.error(f"获取文章失败: {e}")
             return None
 
     def delete_articles(self, article_ids: List[int]) -> Tuple[bool, str]:
@@ -132,11 +134,11 @@ class ArticleService:
                 )
                 db.commit()
 
-                app_logger.info(f"删除文章成功，数量: {deleted}")
+                logger.info(f"删除文章成功，数量: {deleted}")
                 return True, f"成功删除 {deleted} 篇文章"
 
         except Exception as e:
-            app_logger.error(f"删除文章失败: {e}")
+            logger.error(f"删除文章失败: {e}")
             return False, f"删除失败: {str(e)}"
 
     def mark_as_downloaded(self, article_ids: List[int]) -> bool:
@@ -158,7 +160,7 @@ class ArticleService:
                 return True
 
         except Exception as e:
-            app_logger.error(f"标记文章失败: {e}")
+            logger.error(f"标记文章失败: {e}")
             return False
 
     def collect_articles_single_page(self, account_id: int) -> Tuple[bool, str, int]:
@@ -181,7 +183,7 @@ class ArticleService:
             return self._collect_single_page_with_session(account_id, session_data)
 
         except Exception as e:
-            collect_logger.error(f"采集文章失败: {e}")
+            logger.error(f"采集文章失败: {e}")
             return False, f"采集失败: {str(e)}", 0
 
     def _collect_single_page_with_session(
@@ -256,11 +258,11 @@ class ArticleService:
                 account.begin += account.count  # type: ignore[assignment]
                 db.commit()
 
-                collect_logger.info(f"采集成功: {account.nickname}, 数量: {count}")
+                logger.info(f"采集成功: {account.nickname}, 数量: {count}")
                 return True, f"采集成功，共 {count} 篇文章", count
 
         except Exception as e:
-            collect_logger.error(f"采集文章失败: {e}")
+            logger.error(f"采集文章失败: {e}")
             # 尝试更新失败状态
             try:
                 with get_db() as db:
@@ -284,43 +286,43 @@ class ArticleService:
         """
         try:
             # 只加载一次会话，在整个采集过程中复用
-            collect_logger.info(f"开始全部采集，公众号ID: {account_id}")
+            logger.info(f"开始全部采集，公众号ID: {account_id}")
             session_data = self.session_manager.load_session()
             if not session_data:
                 return False, "请先登录微信公众平台", 0
 
-            collect_logger.info("会话加载成功，开始循环采集")
+            logger.info("会话加载成功，开始循环采集")
 
             total_count = 0
             page = 1
 
             while True:
-                collect_logger.info(f"采集第 {page} 页...")
+                logger.info(f"采集第 {page} 页...")
                 success, msg, count = self._collect_single_page_with_session(
                     account_id, session_data
                 )
 
                 if not success:
-                    collect_logger.error(f"采集失败: {msg}")
+                    logger.error(f"采集失败: {msg}")
                     return False, msg, total_count
 
                 total_count += count
-                collect_logger.info(
+                logger.info(
                     f"第 {page} 页采集成功，本页: {count} 篇，累计: {total_count} 篇"
                 )
 
                 # 如果本次采集数量为0，说明已经采集完毕
                 if count == 0:
-                    collect_logger.info("没有更多文章，采集完成")
+                    logger.info("没有更多文章，采集完成")
                     break
 
                 page += 1
 
-            collect_logger.info(f"全部采集完成，总数: {total_count}")
+            logger.info(f"全部采集完成，总数: {total_count}")
             return True, f"采集完成，共 {total_count} 篇文章", total_count
 
         except Exception as e:
-            collect_logger.error(f"全部采集失败: {e}")
+            logger.error(f"全部采集失败: {e}")
             return False, f"采集失败: {str(e)}", 0
 
     def _parse_and_save_articles(self, db: Session, account: WechatAccount, result: dict) -> int:
@@ -375,7 +377,7 @@ class ArticleService:
             db.commit()
 
         except Exception as e:
-            collect_logger.error(f"解析文章数据失败: {e}")
+            logger.error(f"解析文章数据失败: {e}")
             db.rollback()
 
         return count
@@ -392,5 +394,5 @@ class ArticleService:
                 names = db.query(WechatArticle.nickname).distinct().all()
                 return [name[0] for name in names if name[0]]
         except Exception as e:
-            app_logger.error(f"获取公众号名称失败: {e}")
+            logger.error(f"获取公众号名称失败: {e}")
             return []
