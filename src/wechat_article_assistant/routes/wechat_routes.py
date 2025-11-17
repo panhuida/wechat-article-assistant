@@ -132,6 +132,8 @@ def wait_login():
         return jsonify({"success": False, "message": "登录超时"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
+    finally:
+        wechat_login.close()
 
 
 @wechat_bp.route("/logout", methods=["POST"])
