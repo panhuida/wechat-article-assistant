@@ -2,10 +2,29 @@
 name = "wechat-article-assistant"
 version = "0.1.0"
 description = "微信公众号文章阅读助手"
+readme = "README.md"
+authors = [
+    { name = "panhuida" }
+]
 requires-python = ">=3.12"
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = [
+    "wechat",
+    "wechat-public-account",
+    "flask",
+    "playwright",
+    "wechat-article-downloader",
+]
+urls = { Homepage = "https://github.com/panhuida/wechat-article-assistant", Repository = "https://github.com/panhuida/wechat-article-assistant", "Bug Tracker" = "https://github.com/panhuida/wechat-article-assistant/issues" }
 dependencies = [
-    "flask>=3.0.0",
-    "sqlalchemy>=2.0.0",
+    "flask>=3.0.0,<4.0.0",
+    "sqlalchemy>=2.0.0,<3.0.0",
     "python-dotenv>=1.0.0",
     "playwright>=1.40.0",
     "requests>=2.31.0",
@@ -18,9 +37,15 @@ dependencies = [
 dev = [
     "ruff>=0.1.0",
     "mypy>=1.7.0",
+    "pyright>=1.1.0",
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "pytest-asyncio",            # 如果有异步测试
+    "pytest-mock",               # mock 工具    
     "types-requests>=2.31.0",
+    "types-beautifulsoup4",      # beautifulsoup4 的类型提示
+    "types-Pillow",              # Pillow 的类型提示
+    "pre-commit",                # Git hooks 管理    
 ]
 
 [project.scripts]
@@ -30,20 +55,99 @@ wechat-article-assistant = "wechat_article_assistant.cli:main"
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["wechat_article_assistant*"]
+exclude = ["tests*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "B", "Q"]
-ignore = ["E501"]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "B",   # flake8-bugbear
+    "Q",   # flake8-quotes
+    "UP",  # pyupgrade
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "PTH", # flake8-use-pathlib
+]
+ignore = ["E501"]  # line too long (handled by formatter)
+
+[tool.ruff.lint.isort]
+known-first-party = ["wechat_article_assistant"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
 disallow_untyped_defs = false
+disallow_any_generics = false
+check_untyped_defs = true
+no_implicit_reexport = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "playwright.*",
+    "qrcode.*",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = [
+    "--cov=wechat_article_assistant",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "-v",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/node_modules",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+]
+stubPath = "typings"
+reportMissingImports = true
+reportMissingTypeStubs = false
+pythonVersion = "3.12"
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+reportUnusedImport = "warning"
+reportUnusedClass = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"
+reportDuplicateImport = "warning"
+reportUndefinedVariable = "error"
+reportUnboundVariable = "error"
+reportOptionalMemberAccess = "warning"
+reportOptionalSubscript = "warning"
+reportPrivateUsage = "warning"
