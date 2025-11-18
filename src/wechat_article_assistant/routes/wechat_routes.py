@@ -3,13 +3,13 @@
 import requests
 from flask import Blueprint, jsonify, request
 
-from ..browser.wechat_login import WechatLogin
+from ..browser.wechat_authenticator import WechatAuthenticator
 from ..config import config
 from ..services.wechat_service import WechatService
 
 wechat_bp = Blueprint("wechat", __name__, url_prefix="/api/wechat")
 wechat_service = WechatService()
-wechat_login = WechatLogin()
+wechat_auth = WechatAuthenticator()
 
 
 @wechat_bp.route("/list", methods=["GET"])
@@ -53,22 +53,22 @@ def delete_account(account_id):
 
 @wechat_bp.route("/search", methods=["POST"])
 def search_account():
-    """搜索公众号"""
+    """搜索公众号（自动处理登录）"""
     data = request.json
     query = data.get("query", "")
 
     if not query:
         return jsonify({"success": False, "message": "搜索关键词不能为空"})
 
-    # 检查登录状态
-    if not wechat_login.check_login_status():
-        return jsonify({"success": False, "message": "请先登录", "needLogin": True})
-
     try:
+        # 确保已认证（自动处理会话复用和登录）
+        if not wechat_auth.ensure_authenticated():
+            return jsonify({"success": False, "message": "认证失败，请重试"})
+
         # 获取会话数据
-        session_data = wechat_login.session_manager.load_session()
+        session_data = wechat_auth.get_session_data()
         if not session_data:
-            return jsonify({"success": False, "message": "会话已失效", "needLogin": True})
+            return jsonify({"success": False, "message": "获取会话数据失败"})
 
         # 构造搜索请求
         url = f"{config.WECHAT_MP_URL}/cgi-bin/searchbiz"
@@ -97,6 +97,10 @@ def search_account():
             return jsonify({"success": True, "data": accounts})
         else:
             error_msg = result.get("base_resp", {}).get("err_msg", "搜索失败")
+            # 如果是会话失效错误，清除会话并提示重试
+            if "登录" in error_msg or "login" in error_msg.lower():
+                wechat_auth.session_manager.clear_session()
+                return jsonify({"success": False, "message": "会话已失效，请重试"})
             return jsonify({"success": False, "message": error_msg})
 
     except Exception as e:
@@ -106,46 +110,12 @@ def search_account():
 @wechat_bp.route("/login/status", methods=["GET"])
 def check_login():
     """检查登录状态"""
-    is_logged_in = wechat_login.check_login_status()
+    is_logged_in = wechat_auth.session_manager.is_session_valid()
     return jsonify({"success": True, "isLoggedIn": is_logged_in})
-
-
-@wechat_bp.route("/login/qrcode", methods=["GET"])
-def get_qrcode():
-    """获取登录二维码"""
-    try:
-        qr_url = wechat_login.get_qr_code_url()
-        if qr_url == "ALREADY_LOGGED_IN":
-            # 已经登录，关闭浏览器并返回特殊标记
-            wechat_login.close()
-            return jsonify({"success": True, "alreadyLoggedIn": True, "message": "已登录"})
-        elif qr_url:
-            return jsonify({"success": True, "qrUrl": qr_url})
-        # 获取二维码失败，关闭浏览器
-        wechat_login.close()
-        return jsonify({"success": False, "message": "获取二维码失败"})
-    except Exception as e:
-        # 发生异常，关闭浏览器
-        wechat_login.close()
-        return jsonify({"success": False, "message": str(e)})
-
-
-@wechat_bp.route("/login/wait", methods=["POST"])
-def wait_login():
-    """等待用户扫码登录"""
-    try:
-        success = wechat_login.wait_for_login(timeout=300)
-        if success:
-            return jsonify({"success": True, "message": "登录成功"})
-        return jsonify({"success": False, "message": "登录超时"})
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
-    finally:
-        wechat_login.close()
 
 
 @wechat_bp.route("/logout", methods=["POST"])
 def logout():
     """登出"""
-    wechat_login.logout()
+    wechat_auth.logout()
     return jsonify({"success": True, "message": "已登出"})

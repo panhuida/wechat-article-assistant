@@ -137,40 +137,6 @@
         </div>
     </div>
 </div>
-
-<!-- 登录模态框 -->
-<div id="loginModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-        <div class="text-center">
-            <h3 class="text-xl font-bold mb-4">微信公众平台登录</h3>
-            <p class="text-gray-600 mb-4">请使用微信扫描下方二维码登录</p>
-            <div id="qrcodeContainer" class="flex justify-center mb-4">
-                <div class="w-64 h-64 bg-gray-100 flex items-center justify-center">
-                    <p class="text-gray-400">加载中...</p>
-                </div>
-            </div>
-            
-            <!-- 备用方案提示 -->
-            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-left">
-                <p class="font-medium text-blue-800 mb-2">💡 备用登录方式：</p>
-                <ol class="text-blue-700 space-y-1 ml-4 list-decimal">
-                    <li>打开浏览器访问 <a href="https://mp.weixin.qq.com" target="_blank" class="underline">mp.weixin.qq.com</a></li>
-                    <li>使用微信扫码登录</li>
-                    <li>登录成功后，返回本应用再次尝试搜索</li>
-                </ol>
-            </div>
-            
-            <div class="flex space-x-2 justify-center">
-                <button onclick="retryGetQrcode()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
-                    重新获取
-                </button>
-                <button onclick="closeLoginModal()" class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600">
-                    取消
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -327,16 +293,13 @@ async function searchAccount() {
     }
 
     try {
+        // 显示加载提示
+        showNotification('正在搜索，如需登录会自动打开浏览器...', 'info');
+        
         const result = await apiRequest('/api/wechat/search', {
             method: 'POST',
             body: JSON.stringify({ query })
         });
-
-        if (result.needLogin) {
-            // 需要登录
-            showLoginModal();
-            return;
-        }
 
         if (result.success) {
             renderSearchResults(result.data);
@@ -465,98 +428,6 @@ async function collectAll(id) {
     } catch (error) {
         showNotification('采集失败', 'error');
     }
-}
-
-// 显示登录模态框
-async function showLoginModal() {
-    const modal = document.getElementById('loginModal');
-    const qrcodeContainer = document.getElementById('qrcodeContainer');
-    
-    modal.classList.remove('hidden');
-    qrcodeContainer.innerHTML = '<div class="w-64 h-64 bg-gray-100 flex items-center justify-center"><p class="text-gray-400">正在加载二维码...</p></div>';
-    
-    await loadQrcode();
-}
-
-// 加载二维码
-async function loadQrcode() {
-    const qrcodeContainer = document.getElementById('qrcodeContainer');
-    
-    try {
-        // 获取二维码
-        const result = await apiRequest('/api/wechat/login/qrcode');
-        
-        if (result.success && result.alreadyLoggedIn) {
-            // 已经登录，直接关闭模态框
-            qrcodeContainer.innerHTML = `
-                <div class="w-64 h-64 bg-green-50 border border-green-300 rounded flex items-center justify-center">
-                    <div class="text-center p-4">
-                        <p class="text-green-600 font-medium mb-2">✓ 已登录</p>
-                        <p class="text-green-500 text-sm">检测到已有登录状态</p>
-                    </div>
-                </div>
-            `;
-            showNotification('检测到已有登录状态，登录成功！', 'success');
-            setTimeout(() => {
-                closeLoginModal();
-            }, 1500);
-        } else if (result.success && result.qrUrl) {
-            // 显示二维码
-            qrcodeContainer.innerHTML = `<img src="${result.qrUrl}" alt="登录二维码" class="w-64 h-64 border border-gray-300 rounded">`;
-            
-            // 开始等待登录
-            waitForLogin();
-        } else {
-            qrcodeContainer.innerHTML = `
-                <div class="w-64 h-64 bg-red-50 border border-red-300 rounded flex items-center justify-center">
-                    <div class="text-center p-4">
-                        <p class="text-red-600 font-medium mb-2">获取二维码失败</p>
-                        <p class="text-red-500 text-sm">${result.message || '请使用备用登录方式'}</p>
-                    </div>
-                </div>
-            `;
-            showNotification(result.message || '获取二维码失败，请使用备用登录方式', 'error');
-        }
-    } catch (error) {
-        qrcodeContainer.innerHTML = `
-            <div class="w-64 h-64 bg-red-50 border border-red-300 rounded flex items-center justify-center">
-                <div class="text-center p-4">
-                    <p class="text-red-600 font-medium mb-2">加载失败</p>
-                    <p class="text-red-500 text-sm">请使用备用登录方式</p>
-                </div>
-            </div>
-        `;
-        showNotification('获取二维码失败，请使用备用登录方式', 'error');
-        console.error('获取二维码错误:', error);
-    }
-}
-
-// 重新获取二维码
-async function retryGetQrcode() {
-    await loadQrcode();
-}
-
-// 等待用户扫码登录
-async function waitForLogin() {
-    try {
-        showNotification('请使用微信扫码登录', 'info');
-        const result = await apiRequest('/api/wechat/login/wait', { method: 'POST' });
-        
-        if (result.success) {
-            showNotification('登录成功！', 'success');
-            closeLoginModal();
-            // 可以继续之前的搜索操作
-        } else {
-            showNotification(result.message || '登录失败', 'error');
-        }
-    } catch (error) {
-        showNotification('登录失败', 'error');
-    }
-}
-
-// 关闭登录模态框
-function closeLoginModal() {
-    document.getElementById('loginModal').classList.add('hidden');
 }
 
 // 页面加载时获取公众号列表
