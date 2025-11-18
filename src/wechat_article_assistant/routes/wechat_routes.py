@@ -115,10 +115,18 @@ def get_qrcode():
     """获取登录二维码"""
     try:
         qr_url = wechat_login.get_qr_code_url()
-        if qr_url:
+        if qr_url == "ALREADY_LOGGED_IN":
+            # 已经登录，关闭浏览器并返回特殊标记
+            wechat_login.close()
+            return jsonify({"success": True, "alreadyLoggedIn": True, "message": "已登录"})
+        elif qr_url:
             return jsonify({"success": True, "qrUrl": qr_url})
+        # 获取二维码失败，关闭浏览器
+        wechat_login.close()
         return jsonify({"success": False, "message": "获取二维码失败"})
     except Exception as e:
+        # 发生异常，关闭浏览器
+        wechat_login.close()
         return jsonify({"success": False, "message": str(e)})
 
 

@@ -486,7 +486,21 @@ async function loadQrcode() {
         // 获取二维码
         const result = await apiRequest('/api/wechat/login/qrcode');
         
-        if (result.success && result.qrUrl) {
+        if (result.success && result.alreadyLoggedIn) {
+            // 已经登录，直接关闭模态框
+            qrcodeContainer.innerHTML = `
+                <div class="w-64 h-64 bg-green-50 border border-green-300 rounded flex items-center justify-center">
+                    <div class="text-center p-4">
+                        <p class="text-green-600 font-medium mb-2">✓ 已登录</p>
+                        <p class="text-green-500 text-sm">检测到已有登录状态</p>
+                    </div>
+                </div>
+            `;
+            showNotification('检测到已有登录状态，登录成功！', 'success');
+            setTimeout(() => {
+                closeLoginModal();
+            }, 1500);
+        } else if (result.success && result.qrUrl) {
             // 显示二维码
             qrcodeContainer.innerHTML = `<img src="${result.qrUrl}" alt="登录二维码" class="w-64 h-64 border border-gray-300 rounded">`;
             

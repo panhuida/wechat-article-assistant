@@ -40,7 +40,18 @@ class WechatLogin:
             logger.info("开始获取登录二维码")
             page = self.browser_manager.start(headless=False)
             logger.info(f"正在访问: {self.login_url}")
-            page.goto(self.login_url, wait_until="networkidle")
+            page.goto(self.login_url, wait_until="domcontentloaded", timeout=30000)
+            
+            # 检查是否已经登录（直接跳转到了登录后的页面）
+            time.sleep(1)  # 等待页面稳定
+            current_url = page.url
+            if any(keyword in current_url for keyword in ["cgi-bin/home", "token=", "home/index"]):
+                logger.info(f"检测到已经登录，当前URL: {current_url}")
+                # 已登录，直接保存会话
+                self._save_login_session()
+                logger.info("✓ 使用已有登录状态")
+                # 返回一个特殊标记，表示已登录
+                return "ALREADY_LOGGED_IN"
 
             # 等待二维码加载，尝试多个可能的选择器
             try:
@@ -50,6 +61,12 @@ class WechatLogin:
                 )
             except Exception as e:
                 logger.warning(f"等待二维码选择器超时: {e}")
+                # 再次检查是否已经登录
+                current_url = page.url
+                if any(keyword in current_url for keyword in ["cgi-bin/home", "token=", "home/index"]):
+                    logger.info("等待二维码超时，但检测到已登录")
+                    self._save_login_session()
+                    return "ALREADY_LOGGED_IN"
 
             # 尝试多个可能的选择器来获取二维码图片
             selectors = [
@@ -139,64 +156,112 @@ class WechatLogin:
                 logger.info("登录成功！")
                 return True
 
-            # 等待URL变化
+            # 使用更可靠的方式监听页面导航
+            logger.info("等待页面导航...")
+            logger.info(f"开始监听循环，超时时间: {timeout}秒")
+            
+            # 标记是否检测到登录
+            login_detected = False
+            last_log_time = start_time
+            check_count = 0
+            
+            # 等待URL变化或特定元素出现
             while time.time() - start_time < timeout:
+                check_count += 1
+                
+                # 每次循环开始时记录
+                if check_count == 1 or check_count % 10 == 0:
+                    logger.info(f"循环检查中... 第 {check_count} 次")
+                
                 try:
-                    current_url = page.url
-
-                    # 检查URL是否已经变化（离开登录页）
-                    if current_url != initial_url:
-                        logger.info(f"URL已变化: {current_url}")
-
-                        # 检查是否跳转到了后台页面
-                        if any(
-                            keyword in current_url
-                            for keyword in ["cgi-bin/home", "token=", "home/index"]
-                        ):
-                            logger.info("检测到登录后的页面特征")
-
-                            # 再等待一下确保页面完全加载
-                            time.sleep(2)
-
-                            # 检查是否有登录后才有的元素
-                            try:
-                                page.wait_for_selector("body", timeout=5000)
-                                logger.info("页面已加载完成")
-                            except Exception as e:  # Playwright 报错时记录调试信息
-                                logger.debug("等待登录后页面内容时出错: %s", e)
-
-                            # 保存会话数据
-                            logger.info("开始保存登录会话...")
-                            self._save_login_session()
-                            logger.info("登录成功！")
-                            return True
-
-                    # 检查是否还有二维码（没有二维码说明已登录或跳转）
+                    # 强制重新获取当前URL（通过JavaScript）
+                    current_url = None
                     try:
-                        qr_element = page.query_selector(
-                            "img[src*='qrcode'], img[src*='scanloginqrcode']"
-                        )
-                        if not qr_element:
-                            logger.info("二维码元素已消失，可能已登录")
-                            # 再检查一下URL
-                            time.sleep(2)
+                        # 直接使用evaluate获取URL
+                        current_url = page.evaluate("() => window.location.href")
+                    except Exception as e:
+                        logger.warning(f"通过evaluate获取URL失败: {e}")
+                        try:
+                            # 降级方案：直接使用page.url
                             current_url = page.url
-                            if any(
-                                keyword in current_url
-                                for keyword in ["cgi-bin/home", "token=", "home/index"]
-                            ):
-                                logger.info(f"确认登录成功，当前URL: {current_url}")
+                        except Exception as e2:
+                            logger.error(f"获取page.url也失败: {e2}")
+                            # 如果连page.url都获取不到，说明页面可能有问题，跳过本次检查
+                            time.sleep(1)
+                            continue
+                    
+                    # 每5秒打印一次当前URL，便于调试
+                    current_time = time.time()
+                    if current_time - last_log_time >= 5:
+                        elapsed = int(current_time - start_time)
+                        logger.info(f"[{elapsed}s] 检查次数: {check_count}, 当前URL: {current_url}")
+                        last_log_time = current_time
+                    
+                    # 首先检查URL是否包含登录成功的特征（不需要URL变化也可以）
+                    if any(keyword in current_url for keyword in ["cgi-bin/home", "token=", "home/index"]):
+                        logger.info(f"✓ 检测到登录成功！URL: {current_url}")
+                        login_detected = True
+                        
+                        # 等待页面稳定加载
+                        logger.info("等待页面稳定...")
+                        time.sleep(2)
+                        
+                        # 保存会话数据
+                        logger.info("开始保存登录会话...")
+                        self._save_login_session()
+                        logger.info("✓ 登录成功！")
+                        return True
+                    
+                    # 检查是否有登录后的特征元素
+                    try:
+                        # 常见的登录后元素选择器
+                        success_selectors = [
+                            ".weui-desktop-account__info",
+                            ".account_setting_area", 
+                            ".new_msg_nav",
+                            "a[href*='account']",
+                            ".icon_menu"
+                        ]
+                        
+                        for selector in success_selectors:
+                            success_indicator = page.query_selector(selector)
+                            if success_indicator:
+                                logger.info(f"✓ 检测到登录后的页面元素: {selector}")
+                                current_url = page.evaluate("window.location.href")
+                                logger.info(f"当前URL: {current_url}")
+                                login_detected = True
+                                
+                                # 保存会话数据
                                 self._save_login_session()
+                                logger.info("✓ 登录成功！")
                                 return True
                     except Exception as e:
-                        logger.debug("查询二维码元素时出错: %s", e)
+                        logger.debug(f"查询登录元素时出错: {e}")
+                    
+                    # 检查二维码状态
+                    try:
+                        # 查找二维码扫描成功的提示
+                        success_tip = page.query_selector(".qrcode_tips, .success_tips, .qrcode_status")
+                        if success_tip:
+                            tip_text = success_tip.inner_text()
+                            if tip_text:
+                                logger.info(f"二维码状态提示: {tip_text}")
+                                if "成功" in tip_text or "confirm" in tip_text.lower() or "已扫描" in tip_text:
+                                    logger.info("检测到扫码成功提示，等待页面跳转...")
+                                    # 给页面更多时间跳转
+                                    time.sleep(5)
+                                    continue
+                    except Exception as e:
+                        logger.debug(f"查询二维码状态时出错: {e}")
 
                 except Exception as e:
                     logger.debug(f"检查登录状态时出错: {e}")
 
+                # 等待1秒再检查
                 time.sleep(1)
 
-            logger.warning("登录超时")
+            if not login_detected:
+                logger.warning(f"登录超时（{timeout}秒），未检测到登录成功")
             return False
 
         except Exception as e:
@@ -207,10 +272,28 @@ class WechatLogin:
         """保存登录会话数据"""
         try:
             logger.info("开始保存会话数据...")
+            
+            # 检查浏览器上下文是否有效
+            if not self.browser_manager.context:
+                logger.error("浏览器上下文无效，无法保存会话")
+                return
 
             # 获取cookies
-            cookies = self.browser_manager.get_cookies()
-            logger.info(f"获取到 {len(cookies)} 个cookies")
+            try:
+                cookies = self.browser_manager.get_cookies()
+                logger.info(f"获取到 {len(cookies)} 个cookies")
+            except Exception as e:
+                logger.error(f"获取cookies失败: {e}")
+                # 尝试从页面直接获取cookies
+                if self.browser_manager.page:
+                    try:
+                        cookies = self.browser_manager.page.context.cookies()
+                        logger.info(f"从页面上下文获取到 {len(cookies)} 个cookies")
+                    except Exception as e2:
+                        logger.error(f"从页面获取cookies也失败: {e2}")
+                        return
+                else:
+                    return
 
             # 提取token（从cookies或页面URL中）
             token = None
