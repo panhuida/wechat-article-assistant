@@ -1,9 +1,10 @@
 """微信公众平台认证管理器"""
 
 import time
-from typing import Optional
+from typing import Any
 
 import requests
+from playwright.sync_api import Page
 
 from ..config import config
 from ..utils.logger import get_module_logger
@@ -40,12 +41,12 @@ class WechatAuthenticator:
         # 1. 检查会话文件是否存在且格式有效
         if self.session_manager.is_session_valid():
             logger.info("发现有效的会话文件，尝试验证...")
-            
+
             # 2. 验证会话是否真实可用
             if self._verify_session():
                 logger.info("✓ 会话验证成功，可以直接使用")
                 return True
-            
+
             logger.warning("会话验证失败，需要重新登录")
         else:
             logger.info("未找到有效会话，需要登录")
@@ -67,7 +68,7 @@ class WechatAuthenticator:
 
             # 构造cookies字典
             cookies = {cookie["name"]: cookie["value"] for cookie in session_data["cookies"]}
-            
+
             # 尝试访问微信公众平台首页
             response = requests.get(
                 self.login_url,
@@ -76,14 +77,14 @@ class WechatAuthenticator:
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
                 },
                 timeout=10,
-                allow_redirects=True
+                allow_redirects=True,
             )
 
             # 检查是否跳转到登录后的页面
             if any(keyword in response.url for keyword in ["cgi-bin/home", "token=", "home/index"]):
                 logger.info(f"会话有效，当前URL: {response.url}")
                 return True
-            
+
             logger.warning(f"会话已失效，被重定向到: {response.url}")
             return False
 
@@ -100,35 +101,35 @@ class WechatAuthenticator:
         """
         try:
             logger.info("启动浏览器进行登录...")
-            
+
             # 启动浏览器（非无头模式，用户可见）
             page = self.browser_manager.start(headless=False)
-            
+
             # 访问登录页面
             logger.info(f"正在访问: {self.login_url}")
             page.goto(self.login_url, wait_until="domcontentloaded", timeout=30000)
-            
+
             # 等待页面稳定
             time.sleep(2)
-            
+
             # 检查是否已经登录（浏览器中有旧的cookie）
             current_url = page.url
             if any(keyword in current_url for keyword in ["cgi-bin/home", "token=", "home/index"]):
                 logger.info(f"检测到浏览器已登录，当前URL: {current_url}")
                 self._save_session(page)
                 return True
-            
+
             # 需要扫码登录
             logger.info("请在浏览器中使用微信扫码登录...")
             logger.info("=" * 60)
             logger.info("等待用户扫码...")
             logger.info("=" * 60)
-            
+
             # 等待登录成功
             if self._wait_for_login(page):
                 self._save_session(page)
                 return True
-            
+
             return False
 
         except Exception as e:
@@ -138,7 +139,7 @@ class WechatAuthenticator:
             # 登录完成后关闭浏览器
             self.browser_manager.stop()
 
-    def _wait_for_login(self, page, timeout: int = 300) -> bool:
+    def _wait_for_login(self, page: Page, timeout: int = 300) -> bool:
         """
         等待用户扫码登录
 
@@ -181,13 +182,15 @@ class WechatAuthenticator:
                     last_log_time = current_time
 
                 # 检查URL是否包含登录成功的特征
-                if any(keyword in current_url for keyword in ["cgi-bin/home", "token=", "home/index"]):
+                if any(
+                    keyword in current_url for keyword in ["cgi-bin/home", "token=", "home/index"]
+                ):
                     logger.info(f"✓ 检测到登录成功！URL: {current_url}")
-                    
+
                     # 等待页面稳定
                     logger.info("等待页面稳定...")
                     time.sleep(2)
-                    
+
                     return True
 
                 # 检查是否有登录后的特征元素
@@ -197,7 +200,7 @@ class WechatAuthenticator:
                         ".account_setting_area",
                         ".new_msg_nav",
                         "a[href*='account']",
-                        ".icon_menu"
+                        ".icon_menu",
                     ]
 
                     for selector in success_selectors:
@@ -216,7 +219,7 @@ class WechatAuthenticator:
         logger.warning(f"登录超时（{timeout}秒），未检测到登录成功")
         return False
 
-    def _save_session(self, page):
+    def _save_session(self, page: Page):
         """
         保存登录会话数据
 
@@ -255,7 +258,7 @@ class WechatAuthenticator:
         except Exception as e:
             logger.error(f"保存会话失败: {e}", exc_info=True)
 
-    def get_session_data(self) -> Optional[dict]:
+    def get_session_data(self) -> dict[str, Any] | None:
         """
         获取当前会话数据
 

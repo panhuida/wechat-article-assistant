@@ -28,7 +28,7 @@ def main():
         parser.print_help()
 
 
-def download_command(args):
+def download_command(args: argparse.Namespace) -> None:
     """下载命令处理"""
     download_service = DownloadService()
 

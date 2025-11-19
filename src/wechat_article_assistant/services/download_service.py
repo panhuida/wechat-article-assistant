@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -27,7 +27,7 @@ class DownloadService:
 
     def _download_and_replace_image(
         self, img_url: str, img_index: Any, article_url: str, download_dir: Path, assets_dir: Path
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         下载单张图片并返回本地相对路径
 
@@ -86,8 +86,8 @@ class DownloadService:
         article_url: str,
         article_title: str,
         account_name: str = "未分类",
-        save_dir: Optional[Path] = None,
-    ) -> Tuple[bool, str]:
+        save_dir: Path | None = None,
+    ) -> tuple[bool, str]:
         """
         下载单篇文章（包含HTML、图片、CSS等资源）
 
@@ -257,8 +257,8 @@ class DownloadService:
             return False, error_msg
 
     def download_articles_batch(
-        self, articles: List[dict], save_dir: Optional[Path] = None
-    ) -> Tuple[int, int, List[str]]:
+        self, articles: list[dict[str, Any]], save_dir: Path | None = None
+    ) -> tuple[int, int, list[str]]:
         """
         批量下载文章
 
@@ -294,8 +294,8 @@ class DownloadService:
         return success_count, fail_count, errors
 
     def download_from_file(
-        self, file_path: str, save_dir: Optional[Path] = None
-    ) -> Tuple[int, int, List[str]]:
+        self, file_path: str, save_dir: Path | None = None
+    ) -> tuple[int, int, list[str]]:
         """
         从文件读取URL列表并下载
 
@@ -312,7 +312,7 @@ class DownloadService:
             (成功数量, 失败数量, 错误消息列表)
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 lines = f.readlines()
 
             # 过滤注释和空行

@@ -42,7 +42,7 @@ class Config:
 
     # 确保目录存在
     @classmethod
-    def init_app(cls):
+    def init_app(cls) -> None:
         """初始化应用配置"""
         cls.LOG_DIR.mkdir(parents=True, exist_ok=True)
         cls.DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)

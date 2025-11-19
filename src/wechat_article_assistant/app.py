@@ -14,7 +14,7 @@ logger = get_module_logger(__name__)
 setup_werkzeug_logger()
 
 
-def create_app():
+def create_app() -> Flask:
     """创建Flask应用"""
     app = Flask(__name__)
     app.config["SECRET_KEY"] = config.SECRET_KEY

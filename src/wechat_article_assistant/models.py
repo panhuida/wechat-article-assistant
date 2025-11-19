@@ -1,8 +1,9 @@
 """数据模型定义"""
 
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Generator
+from typing import Any
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
@@ -13,7 +14,9 @@ from .config import config
 # 创建基类
 class Base(DeclarativeBase):
     """SQLAlchemy 声明式基类"""
+
     pass
+
 
 # 创建引擎
 engine = create_engine(config.DATABASE_URL, echo=False)
@@ -71,7 +74,7 @@ class WechatAccount(Base):
     # 关联文章
     articles = relationship("WechatArticle", back_populates="account")
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,
@@ -122,7 +125,7 @@ class WechatArticle(Base):
     # 关联公众号
     account = relationship("WechatAccount", back_populates="articles")
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,

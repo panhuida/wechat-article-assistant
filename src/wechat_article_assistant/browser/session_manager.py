@@ -3,7 +3,7 @@
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, cast
+from typing import Any, cast
 
 from ..config import config
 from ..utils.logger import get_module_logger
@@ -14,7 +14,7 @@ logger = get_module_logger(__name__)
 class SessionManager:
     """会话管理器"""
 
-    def __init__(self, session_file: Optional[Path] = None):
+    def __init__(self, session_file: Path | None = None):
         """
         初始化会话管理器
 
@@ -25,12 +25,15 @@ class SessionManager:
         self.session_file.parent.mkdir(parents=True, exist_ok=True)
 
         # 缓存会话数据，避免频繁读取文件
-        self._cached_session: Optional[Dict[str, Any]] = None
+        self._cached_session: dict[str, Any] | None = None
         self._cache_time: float = 0
         self._cache_ttl: int = 300  # 缓存5分钟
 
     def save_session(
-        self, cookies: list, token: Optional[str] = None, other_data: Optional[Dict[str, Any]] = None
+        self,
+        cookies: list[dict[str, Any]],
+        token: str | None = None,
+        other_data: dict[str, Any] | None = None,
     ) -> bool:
         """
         保存会话数据
@@ -58,7 +61,7 @@ class SessionManager:
             logger.error(f"保存会话数据失败: {e}")
             return False
 
-    def load_session(self, force_reload: bool = False) -> Optional[Dict[str, Any]]:
+    def load_session(self, force_reload: bool = False) -> dict[str, Any] | None:
         """
         加载会话数据（带缓存）
 
@@ -82,8 +85,8 @@ class SessionManager:
                 self._cached_session = None
                 return None
 
-            with open(self.session_file, "r", encoding="utf-8") as f:
-                session_data = cast(Dict[str, Any], json.load(f))
+            with open(self.session_file, encoding="utf-8") as f:
+                session_data = cast(dict[str, Any], json.load(f))
 
             # 更新缓存
             self._cached_session = session_data

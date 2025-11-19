@@ -20,7 +20,7 @@ def get_accounts():
 
 
 @wechat_bp.route("/<int:account_id>", methods=["GET"])
-def get_account(account_id):
+def get_account(account_id: int):
     """获取单个公众号"""
     account = wechat_service.get_account_by_id(account_id)
     if account:
@@ -37,7 +37,7 @@ def create_account():
 
 
 @wechat_bp.route("/<int:account_id>", methods=["PUT"])
-def update_account(account_id):
+def update_account(account_id: int):
     """更新公众号"""
     data = request.json
     success, message = wechat_service.update_account(account_id, data)
@@ -45,7 +45,7 @@ def update_account(account_id):
 
 
 @wechat_bp.route("/<int:account_id>", methods=["DELETE"])
-def delete_account(account_id):
+def delete_account(account_id: int):
     """删除公众号"""
     success, message = wechat_service.delete_account(account_id)
     return jsonify({"success": success, "message": message})

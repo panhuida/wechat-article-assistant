@@ -39,7 +39,7 @@ def get_articles():
 
 
 @article_bp.route("/<int:article_id>", methods=["GET"])
-def get_article(article_id):
+def get_article(article_id: int):
     """获取单篇文章"""
     article = article_service.get_article_by_id(article_id)
     if article:
@@ -61,14 +61,14 @@ def delete_articles():
 
 
 @article_bp.route("/collect/single/<int:account_id>", methods=["POST"])
-def collect_single_page(account_id):
+def collect_single_page(account_id: int):
     """采集单页文章"""
     success, message, count = article_service.collect_articles_single_page(account_id)
     return jsonify({"success": success, "message": message, "count": count})
 
 
 @article_bp.route("/collect/all/<int:account_id>", methods=["POST"])
-def collect_all(account_id):
+def collect_all(account_id: int):
     """采集全部文章"""
     success, message, count = article_service.collect_articles_all(account_id)
     return jsonify({"success": success, "message": message, "count": count})

@@ -4,7 +4,7 @@ import json
 import random
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import requests
 from sqlalchemy import or_
@@ -29,13 +29,13 @@ class ArticleService:
         self,
         page: int = 1,
         page_size: int = 20,
-        search: Optional[str] = None,
-        nickname: Optional[str] = None,
-        is_deleted: Optional[str] = None,
-        is_downloaded: Optional[str] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-    ) -> Tuple[List[Dict[str, Any]], int]:
+        search: str | None = None,
+        nickname: str | None = None,
+        is_deleted: str | None = None,
+        is_downloaded: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         获取文章列表（支持筛选和分页）
 
@@ -99,7 +99,7 @@ class ArticleService:
             logger.error(f"获取文章列表失败: {e}")
             return [], 0
 
-    def get_article_by_id(self, article_id: int) -> Optional[Dict[str, Any]]:
+    def get_article_by_id(self, article_id: int) -> dict[str, Any] | None:
         """
         根据ID获取文章
 
@@ -117,7 +117,7 @@ class ArticleService:
             logger.error(f"获取文章失败: {e}")
             return None
 
-    def delete_articles(self, article_ids: List[int]) -> Tuple[bool, str]:
+    def delete_articles(self, article_ids: list[int]) -> tuple[bool, str]:
         """
         批量删除文章
 
@@ -143,7 +143,7 @@ class ArticleService:
             logger.error(f"删除文章失败: {e}")
             return False, f"删除失败: {str(e)}"
 
-    def mark_as_downloaded(self, article_ids: List[int]) -> bool:
+    def mark_as_downloaded(self, article_ids: list[int]) -> bool:
         """
         标记文章为已下载
 
@@ -165,7 +165,7 @@ class ArticleService:
             logger.error(f"标记文章失败: {e}")
             return False
 
-    def collect_articles_single_page(self, account_id: int) -> Tuple[bool, str, int]:
+    def collect_articles_single_page(self, account_id: int) -> tuple[bool, str, int]:
         """
         采集单页文章
 
@@ -189,8 +189,8 @@ class ArticleService:
             return False, f"采集失败: {str(e)}", 0
 
     def _collect_single_page_with_session(
-        self, account_id: int, session_data: dict
-    ) -> Tuple[bool, str, int]:
+        self, account_id: int, session_data: dict[str, Any]
+    ) -> tuple[bool, str, int]:
         """
         使用已有会话采集单页文章（内部方法）
 
@@ -276,7 +276,7 @@ class ArticleService:
                 pass
             return False, f"采集失败: {str(e)}", 0
 
-    def collect_articles_all(self, account_id: int) -> Tuple[bool, str, int]:
+    def collect_articles_all(self, account_id: int) -> tuple[bool, str, int]:
         """
         采集全部文章（循环采集直到没有更多文章）
 
@@ -309,9 +309,7 @@ class ArticleService:
                     return False, msg, total_count
 
                 total_count += count
-                logger.info(
-                    f"第 {page} 页采集成功，本页: {count} 篇，累计: {total_count} 篇"
-                )
+                logger.info(f"第 {page} 页采集成功，本页: {count} 篇，累计: {total_count} 篇")
 
                 # 如果本次采集数量为0，说明已经采集完毕
                 if count == 0:
@@ -332,7 +330,9 @@ class ArticleService:
             logger.error(f"全部采集失败: {e}")
             return False, f"采集失败: {str(e)}", 0
 
-    def _parse_and_save_articles(self, db: Session, account: WechatAccount, result: dict) -> int:
+    def _parse_and_save_articles(
+        self, db: Session, account: WechatAccount, result: dict[str, Any]
+    ) -> int:
         """
         解析并保存文章数据
 
@@ -389,7 +389,7 @@ class ArticleService:
 
         return count
 
-    def get_account_names(self) -> List[str]:
+    def get_account_names(self) -> list[str]:
         """
         获取所有公众号名称（用于筛选下拉列表）
 

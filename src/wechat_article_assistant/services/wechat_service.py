@@ -1,6 +1,6 @@
 """公众号管理服务"""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models import WechatAccount, get_db
 from ..utils.logger import get_module_logger
@@ -16,7 +16,7 @@ class WechatService:
         """初始化公众号服务"""
         pass
 
-    def get_all_accounts(self) -> List[Dict[str, Any]]:
+    def get_all_accounts(self) -> list[dict[str, Any]]:
         """
         获取所有公众号列表
 
@@ -31,7 +31,7 @@ class WechatService:
             logger.error(f"获取公众号列表失败: {e}")
             return []
 
-    def get_account_by_id(self, account_id: int) -> Optional[Dict[str, Any]]:
+    def get_account_by_id(self, account_id: int) -> dict[str, Any] | None:
         """
         根据ID获取公众号
 
@@ -49,7 +49,7 @@ class WechatService:
             logger.error(f"获取公众号失败: {e}")
             return None
 
-    def create_account(self, account_data: Dict[str, Any]) -> tuple[bool, str, Optional[int]]:
+    def create_account(self, account_data: dict[str, Any]) -> tuple[bool, str, int | None]:
         """
         创建公众号
 
@@ -101,7 +101,7 @@ class WechatService:
             logger.error(f"创建公众号失败: {e}")
             return False, f"创建失败: {str(e)}", None
 
-    def update_account(self, account_id: int, account_data: Dict[str, Any]) -> tuple[bool, str]:
+    def update_account(self, account_id: int, account_data: dict[str, Any]) -> tuple[bool, str]:
         """
         更新公众号
 

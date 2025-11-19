@@ -1,10 +1,9 @@
 """数据验证工具"""
 
 import re
-from typing import Optional
 
 
-def validate_required(value: Optional[str], field_name: str) -> bool:
+def validate_required(value: str | None, field_name: str) -> bool:
     """
     验证必填字段
 
@@ -20,7 +19,7 @@ def validate_required(value: Optional[str], field_name: str) -> bool:
     return True
 
 
-def validate_url(url: Optional[str]) -> bool:
+def validate_url(url: str | None) -> bool:
     """
     验证URL格式
 
@@ -44,7 +43,7 @@ def validate_url(url: Optional[str]) -> bool:
     return url_pattern.match(url) is not None
 
 
-def validate_wechat_article_url(url: Optional[str]) -> bool:
+def validate_wechat_article_url(url: str | None) -> bool:
     """
     验证微信文章URL
 

@@ -1,6 +1,6 @@
 """浏览器实例管理模块（单例模式）"""
 
-from typing import Optional
+from typing import Any
 
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
@@ -12,7 +12,7 @@ logger = get_module_logger(__name__)
 class BrowserManager:
     """浏览器管理器（单例）"""
 
-    _instance: Optional['BrowserManager'] = None
+    _instance: "BrowserManager | None" = None
     _initialized: bool = False
 
     def __new__(cls):
@@ -26,13 +26,13 @@ class BrowserManager:
         # 防止重复初始化
         if BrowserManager._initialized:
             return
-        
+
         self.playwright = None
-        self.browser: Optional[Browser] = None
-        self.context: Optional[BrowserContext] = None
-        self.page: Optional[Page] = None
+        self.browser: Browser | None = None
+        self.context: BrowserContext | None = None
+        self.page: Page | None = None
         self._is_running = False
-        
+
         BrowserManager._initialized = True
         logger.debug("BrowserManager单例已创建")
 
@@ -88,14 +88,14 @@ class BrowserManager:
             if self.playwright:
                 self.playwright.stop()
                 self.playwright = None
-            
+
             self._is_running = False
             logger.info("浏览器已关闭")
         except Exception as e:
             logger.error(f"关闭浏览器失败: {e}")
             self._is_running = False
 
-    def get_cookies(self) -> list:
+    def get_cookies(self) -> list[dict[str, Any]]:
         """
         获取当前上下文的cookies
 
@@ -106,7 +106,7 @@ class BrowserManager:
             return self.context.cookies()
         return []
 
-    def set_cookies(self, cookies: list):
+    def set_cookies(self, cookies: list[dict[str, Any]]):
         """
         设置cookies到当前上下文
 
