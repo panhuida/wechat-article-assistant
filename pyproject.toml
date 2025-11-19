@@ -113,6 +113,10 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+norecursedirs = "tests/manual"
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
 addopts = [
     "--cov=wechat_article_assistant",
     "--cov-report=term-missing",
