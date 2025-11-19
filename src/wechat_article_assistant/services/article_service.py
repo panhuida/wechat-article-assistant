@@ -60,7 +60,7 @@ class ArticleService:
                 if search:
                     query = query.filter(
                         or_(
-                            WechatArticle.nickname.like(f"%{search}%"),
+                            WechatArticle.article_title.like(f"%{search}%"),
                             WechatArticle.article_author_name.like(f"%{search}%"),
                         )
                     )
