@@ -1,6 +1,8 @@
 """文章管理服务"""
 
 import json
+import random
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -315,6 +317,11 @@ class ArticleService:
                 if count == 0:
                     logger.info("没有更多文章，采集完成")
                     break
+
+                # 增加随机延时，避免频率控制
+                delay = random.uniform(1, 3)
+                logger.info(f"延时 {delay:.2f} 秒后继续...")
+                time.sleep(delay)
 
                 page += 1
 
