@@ -3,72 +3,63 @@
 {% block title %}文章列表 - 微信公众号文章阅读助手{% endblock %}
 
 {% block content %}
+<!-- 页面标题和批量操作 -->
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">文章列表</h2>
+    <div class="flex items-center space-x-4">
+                            <button onclick="downloadSelected()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+            下载选中
+        </button>
+        <button onclick="deleteSelected()" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+            删除选中
+        </button>
+    </div>
+</div>
+
 <div class="bg-white rounded-lg shadow-lg p-6">
-    <h2 class="text-2xl font-bold mb-6">文章列表</h2>
-
     <!-- 搜索和筛选 -->
-    <div class="mb-6 flex flex-wrap items-end gap-4">
-        <!-- 搜索框 -->
-        <div class="flex-grow">
+    <div class="mb-6 flex flex-wrap items-end gap-3">
+        <div class="flex-grow min-w-[200px]">
             <label for="searchInput" class="sr-only">搜索文章标题或作者</label>
-            <input type="text" id="searchInput" placeholder="搜索文章标题或作者（按回车搜索）" 
-                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="text" id="searchInput" placeholder="搜索标题或作者（回车）" 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]">
         </div>
-
-        <!-- 筛选条件 -->
-        <div class="flex items-end gap-4 flex-wrap">
-            <div>
-                <label for="filterNickname" class="block text-sm font-medium text-gray-700 mb-1">公众号</label>
-                <select id="filterNickname" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]">
-                    <option value="">全部</option>
-                </select>
-            </div>
-            <div>
-                <label for="filterDeleted" class="block text-sm font-medium text-gray-700 mb-1">是否删除</label>
-                <select id="filterDeleted" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]">
-                    <option value="">全部</option>
-                    <option value="否">否</option>
-                    <option value="是">是</option>
-                </select>
-            </div>
-            <div>
-                <label for="filterDownloaded" class="block text-sm font-medium text-gray-700 mb-1">是否下载</label>
-                <select id="filterDownloaded" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]">
-                    <option value="">全部</option>
-                    <option value="否">否</option>
-                    <option value="是">是</option>
-                </select>
-            </div>
-            <div>
-                <label for="filterStartDate" class="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-                <input type="date" id="filterStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div>
-                <label for="filterEndDate" class="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-                <input type="date" id="filterEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div>
-                <button onclick="applyFilters()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 h-[42px]">
-                    查询
-                </button>
-            </div>
+        <div>
+            <label for="filterNickname" class="sr-only">公众号</label>
+            <select id="filterNickname" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="按公众号筛选">
+                <option value="">所有公众号</option>
+            </select>
         </div>
-    </div>
-
-    <!-- 批量操作 -->
-    <div class="flex justify-between items-center mb-4">
-        <div class="flex items-center space-x-4">
+        <div>
+            <label for="filterDeleted" class="sr-only">是否删除</label>
+            <select id="filterDeleted" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="按删除状态筛选">
+                <option value="">是否删除</option>
+                <option value="否">否</option>
+                <option value="是">是</option>
+            </select>
         </div>
-        <div class="space-x-2">
-            <button onclick="downloadSelected()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
-                下载选中
-            </button>
-            <button onclick="deleteSelected()" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
-                删除选中
+        <div>
+            <label for="filterDownloaded" class="sr-only">是否下载</label>
+            <select id="filterDownloaded" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="按下载状态筛选">
+                <option value="">是否下载</option>
+                <option value="否">否</option>
+                <option value="是">是</option>
+            </select>
+        </div>
+        <div>
+            <label for="filterStartDate" class="sr-only">开始日期</label>
+            <input type="date" id="filterStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="开始日期">
+        </div>
+        <div>
+            <label for="filterEndDate" class="sr-only">结束日期</label>
+            <input type="date" id="filterEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="结束日期">
+        </div>
+        <div>
+            <button onclick="applyFilters()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 h-[42px]">
+                查询
             </button>
         </div>
     </div>
-
     <!-- 文章列表表格 -->
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -94,16 +85,9 @@
         <div class="text-sm text-gray-700">
             共 <span id="totalCount">0</span> 篇文章
         </div>
-        <div class="flex space-x-2">
-            <button onclick="previousPage()" id="prevBtn" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50" disabled>
-                上一页
-            </button>
-            <span id="pageInfo" class="px-3 py-1">第 1 页</span>
-            <button onclick="nextPage()" id="nextBtn" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
-                下一页
-            </button>
-        </div>
-    </div>
+            <div id="pagination-container" class="flex items-center space-x-1">
+                <!-- Pagination buttons will be dynamically inserted here by JavaScript -->
+            </div>    </div>
 </div>
 {% endblock %}
 
@@ -195,27 +179,102 @@ function renderArticles(articles) {
 function updatePagination() {
     const totalPages = Math.ceil(totalArticles / pageSize);
     document.getElementById('totalCount').textContent = totalArticles;
-    document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+
+    const container = document.getElementById('pagination-container');
+    container.innerHTML = '';
+
+    if (totalPages <= 1) {
+        return; // Don't render pagination if not needed
+    }
+
+    // Styles for buttons
+    const baseStyle = 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+    const btnStyle = `${baseStyle} bg-white border-gray-300 text-gray-700 hover:bg-gray-50`;
+    const activeBtnStyle = `${baseStyle} bg-blue-500 border-blue-500 text-white hover:bg-blue-600`;
+    const disabledBtnStyle = `${baseStyle} bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed`;
+    const ellipsisStyle = 'inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 select-none';
+
+    const renderButton = (text, page, isDisabled = false, isActive = false) => {
+        const el = document.createElement('button');
+        el.textContent = text;
+        if (page) {
+            el.onclick = () => goToPage(page);
+        }
+        el.disabled = isDisabled;
+
+        if (isActive) {
+            el.className = activeBtnStyle;
+        } else if (isDisabled) {
+            el.className = disabledBtnStyle;
+        } else {
+            el.className = btnStyle;
+        }
+        return el;
+    };
     
-    document.getElementById('prevBtn').disabled = currentPage === 1;
-    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+    const renderEllipsis = () => {
+        const el = document.createElement('span');
+        el.textContent = '...';
+        el.className = ellipsisStyle;
+        return el;
+    };
+
+    // Previous button
+    container.appendChild(renderButton('上一页', currentPage - 1, currentPage === 1));
+
+    // Page numbers
+    const pagesToShow = [];
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pagesToShow.push(i);
+    } else {
+        pagesToShow.push(1);
+        if (currentPage > 3) {
+            pagesToShow.push('...');
+        }
+        if (currentPage > 2) {
+            pagesToShow.push(currentPage - 1);
+        }
+        if (currentPage !== 1 && currentPage !== totalPages) {
+            pagesToShow.push(currentPage);
+        }
+        if (currentPage < totalPages - 1) {
+            pagesToShow.push(currentPage + 1);
+        }
+        if (currentPage < totalPages - 2) {
+            pagesToShow.push('...');
+        }
+        pagesToShow.push(totalPages);
+    }
+    
+    [...new Set(pagesToShow)].forEach(page => {
+        if (page === '...') {
+            container.appendChild(renderEllipsis());
+        } else {
+            container.appendChild(renderButton(page, page, false, page === currentPage));
+        }
+    });
+
+    // Next button
+    container.appendChild(renderButton('下一页', currentPage + 1, currentPage === totalPages));
+}
+
+// 跳转到指定页
+function goToPage(page) {
+    const totalPages = Math.ceil(totalArticles / pageSize);
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+        currentPage = page;
+        loadArticles();
+    }
 }
 
 // 上一页
 function previousPage() {
-    if (currentPage > 1) {
-        currentPage--;
-        loadArticles();
-    }
+    goToPage(currentPage - 1);
 }
 
 // 下一页
 function nextPage() {
-    const totalPages = Math.ceil(totalArticles / pageSize);
-    if (currentPage < totalPages) {
-        currentPage++;
-        loadArticles();
-    }
+    goToPage(currentPage + 1);
 }
 
 // 应用筛选
@@ -245,7 +304,7 @@ function updateSelectedCount() {
     document.querySelectorAll('.article-checkbox:checked').forEach(checkbox => {
         selectedIds.add(parseInt(checkbox.dataset.id));
     });
-    // document.getElementById('selectedCount').textContent = `已选择 ${selectedIds.size} 篇文章`;
+
     
     // 更新全选状态
     const allCheckboxes = document.querySelectorAll('.article-checkbox');
