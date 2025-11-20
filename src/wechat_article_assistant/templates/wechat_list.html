@@ -3,13 +3,14 @@
 {% block title %}公众号管理 - 微信公众号文章阅读助手{% endblock %}
 
 {% block content %}
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">公众号管理</h2>
+    <button onclick="openAddModal()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        新增公众号
+    </button>
+</div>
+
 <div class="bg-white rounded-lg shadow-lg p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold">公众号管理</h2>
-        <button onclick="openAddModal()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-            新增公众号
-        </button>
-    </div>
 
     <!-- 公众号列表表格 -->
     <div class="overflow-x-auto">
