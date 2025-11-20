@@ -10,23 +10,23 @@
     </button>
 </div>
 
-<div class="bg-white rounded-lg shadow-lg p-6">
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
 
     <!-- 公众号列表表格 -->
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">头像</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">名称</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">别名</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">签名</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">采集进度</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">采集状态</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">头像</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">名称</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">别名</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">签名</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">采集进度</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">采集状态</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">操作</th>
                 </tr>
             </thead>
-            <tbody id="accountTableBody" class="bg-white divide-y divide-gray-200">
+            <tbody id="accountTableBody" class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                 <!-- 数据由JavaScript填充 -->
             </tbody>
         </table>
@@ -35,10 +35,10 @@
 
 <!-- 新增/编辑公众号模态框 -->
 <div id="accountModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
-        <div class="flex justify-between items-center mb-4">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
             <h3 id="modalTitle" class="text-xl font-bold">新增公众号</h3>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-white">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
@@ -46,12 +46,12 @@
         </div>
 
         <!-- Tab切换 -->
-        <div class="mb-4 border-b border-gray-200">
+        <div class="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav class="flex space-x-4">
-                <button id="manualTab" onclick="switchTab('manual')" class="py-2 px-4 border-b-2 border-blue-500 font-medium text-blue-600">
+                <button id="manualTab" onclick="switchTab('manual')" class="py-2 px-4 border-b-2 font-medium">
                     手工录入
                 </button>
-                <button id="autoTab" onclick="switchTab('auto')" class="py-2 px-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700">
+                <button id="autoTab" onclick="switchTab('auto')" class="py-2 px-4 border-b-2 font-medium">
                     自动获取
                 </button>
             </nav>
@@ -64,48 +64,48 @@
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">公众号名称 *</label>
-                        <input type="text" id="nickname" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">公众号名称 *</label>
+                        <input type="text" id="nickname" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">别名</label>
-                        <input type="text" id="alias" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">别名</label>
+                        <input type="text" id="alias" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">FakeID</label>
-                    <input type="text" id="fakeid" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">FakeID</label>
+                    <input type="text" id="fakeid" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">头像URL</label>
-                    <input type="text" id="round_head_img" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">头像URL</label>
+                    <input type="text" id="round_head_img" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">签名</label>
-                    <textarea id="signature" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">签名</label>
+                    <textarea id="signature" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"></textarea>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                    <textarea id="memo" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">备注</label>
+                    <textarea id="memo" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"></textarea>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">起始位置</label>
-                        <input type="number" id="begin" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">起始位置</label>
+                        <input type="number" id="begin" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">采集数量</label>
-                        <input type="number" id="count" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">采集数量</label>
+                        <input type="number" id="count" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                     </div>
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                         取消
                     </button>
                     <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
@@ -119,9 +119,9 @@
         <div id="autoForm" class="hidden">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">搜索公众号</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">搜索公众号</label>
                     <div class="flex space-x-2">
-                        <input type="text" id="searchQuery" placeholder="输入公众号名称关键词" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="searchQuery" placeholder="输入公众号名称关键词" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                         <button onclick="searchAccount()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
                             搜索
                         </button>
@@ -129,7 +129,7 @@
                 </div>
 
                 <div id="searchResults" class="hidden">
-                    <h4 class="font-medium mb-2">搜索结果：</h4>
+                    <h4 class="font-medium mb-2 dark:text-gray-200">搜索结果：</h4>
                     <div id="searchResultsList" class="space-y-2 max-h-96 overflow-y-auto">
                         <!-- 搜索结果由JavaScript填充 -->
                     </div>
@@ -183,10 +183,10 @@ function renderAccounts(accounts) {
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                <button onclick="editAccount(${account.id})" class="text-blue-600 hover:text-blue-800">编辑</button>
-                <button onclick="deleteAccount(${account.id})" class="text-red-600 hover:text-red-800">删除</button>
-                <button onclick="collectSingle(${account.id})" class="text-green-600 hover:text-green-800">单页采集</button>
-                <button onclick="collectAll(${account.id})" class="text-purple-600 hover:text-purple-800">全部采集</button>
+                <button onclick="editAccount(${account.id})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">编辑</button>
+                <button onclick="deleteAccount(${account.id})" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">删除</button>
+                <button onclick="collectSingle(${account.id})" class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300">单页采集</button>
+                <button onclick="collectAll(${account.id})" class="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300">全部采集</button>
             </td>
         `;
         tbody.appendChild(row);
@@ -196,12 +196,12 @@ function renderAccounts(accounts) {
 // 获取状态样式类
 function getStatusClass(status) {
     const statusMap = {
-        '未采集': 'bg-gray-200 text-gray-800',
-        '采集中': 'bg-blue-200 text-blue-800',
-        '已采集': 'bg-green-200 text-green-800',
-        '失败': 'bg-red-200 text-red-800'
+        '未采集': 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-100',
+        '采集中': 'bg-blue-200 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300',
+        '已采集': 'bg-green-200 text-green-800 dark:bg-green-900/60 dark:text-green-300',
+        '失败': 'bg-red-200 text-red-800 dark:bg-red-900/60 dark:text-red-300'
     };
-    return statusMap[status] || 'bg-gray-200 text-gray-800';
+    return statusMap[status] || 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-100';
 }
 
 // 打开新增模态框
@@ -268,20 +268,29 @@ function closeModal() {
 
 // 切换Tab
 function switchTab(tab) {
+    const manualTab = document.getElementById('manualTab');
+    const autoTab = document.getElementById('autoTab');
+    const manualForm = document.getElementById('manualForm');
+    const autoForm = document.getElementById('autoForm');
+
+    // Define classes for active and inactive states for both light and dark modes
+    const activeClasses = ['border-blue-500', 'text-blue-600', 'dark:border-blue-400', 'dark:text-blue-400'];
+    const inactiveClasses = ['border-transparent', 'text-gray-500', 'hover:text-gray-700', 'dark:text-gray-400', 'dark:hover:text-gray-300'];
+
     if (tab === 'manual') {
-        document.getElementById('manualTab').classList.add('border-blue-500', 'text-blue-600');
-        document.getElementById('manualTab').classList.remove('border-transparent', 'text-gray-500');
-        document.getElementById('autoTab').classList.remove('border-blue-500', 'text-blue-600');
-        document.getElementById('autoTab').classList.add('border-transparent', 'text-gray-500');
-        document.getElementById('manualForm').classList.remove('hidden');
-        document.getElementById('autoForm').classList.add('hidden');
-    } else {
-        document.getElementById('autoTab').classList.add('border-blue-500', 'text-blue-600');
-        document.getElementById('autoTab').classList.remove('border-transparent', 'text-gray-500');
-        document.getElementById('manualTab').classList.remove('border-blue-500', 'text-blue-600');
-        document.getElementById('manualTab').classList.add('border-transparent', 'text-gray-500');
-        document.getElementById('autoForm').classList.remove('hidden');
-        document.getElementById('manualForm').classList.add('hidden');
+        manualTab.classList.add(...activeClasses);
+        manualTab.classList.remove(...inactiveClasses);
+        autoTab.classList.add(...inactiveClasses);
+        autoTab.classList.remove(...activeClasses);
+        manualForm.classList.remove('hidden');
+        autoForm.classList.add('hidden');
+    } else { // auto tab
+        autoTab.classList.add(...activeClasses);
+        autoTab.classList.remove(...inactiveClasses);
+        manualTab.classList.add(...inactiveClasses);
+        manualTab.classList.remove(...activeClasses);
+        autoForm.classList.remove('hidden');
+        manualForm.classList.add('hidden');
     }
 }
 
@@ -325,14 +334,14 @@ function renderSearchResults(accounts) {
 
     accounts.forEach(account => {
         const div = document.createElement('div');
-        div.className = 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer';
+        div.className = 'border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer';
         div.onclick = () => selectSearchResult(account);
         div.innerHTML = `
             <div class="flex items-center">
-                ${account.round_head_img ? `<img src="${account.round_head_img}" class="w-12 h-12 rounded-full mr-3">` : '<div class="w-12 h-12 bg-gray-300 rounded-full mr-3"></div>'}
+                ${account.round_head_img ? `<img src="${account.round_head_img}" class="w-12 h-12 rounded-full mr-3">` : '<div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full mr-3"></div>'}
                 <div class="flex-1">
                     <h5 class="font-medium">${account.nickname}</h5>
-                    <p class="text-sm text-gray-500">${account.signature || '暂无签名'}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">${account.signature || '暂无签名'}</p>
                 </div>
             </div>
         `;

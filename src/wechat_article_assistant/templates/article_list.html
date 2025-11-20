@@ -16,23 +16,23 @@
     </div>
 </div>
 
-<div class="bg-white rounded-lg shadow-lg p-6">
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
     <!-- 搜索和筛选 -->
     <div class="mb-6 flex flex-wrap items-end gap-3">
         <div class="flex-grow min-w-[200px]">
             <label for="searchInput" class="sr-only">搜索文章标题或作者</label>
             <input type="text" id="searchInput" placeholder="搜索标题或作者（回车）" 
-                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]">
+                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px] dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
         </div>
         <div>
             <label for="filterNickname" class="sr-only">公众号</label>
-            <select id="filterNickname" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="按公众号筛选">
+            <select id="filterNickname" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px] dark:bg-gray-700 dark:border-gray-600 dark:text-white" title="按公众号筛选">
                 <option value="">所有公众号</option>
             </select>
         </div>
         <div>
             <label for="filterDeleted" class="sr-only">是否删除</label>
-            <select id="filterDeleted" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="按删除状态筛选">
+            <select id="filterDeleted" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px] dark:bg-gray-700 dark:border-gray-600 dark:text-white" title="按删除状态筛选">
                 <option value="">是否删除</option>
                 <option value="否">否</option>
                 <option value="是">是</option>
@@ -40,7 +40,7 @@
         </div>
         <div>
             <label for="filterDownloaded" class="sr-only">是否下载</label>
-            <select id="filterDownloaded" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="按下载状态筛选">
+            <select id="filterDownloaded" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px] dark:bg-gray-700 dark:border-gray-600 dark:text-white" title="按下载状态筛选">
                 <option value="">是否下载</option>
                 <option value="否">否</option>
                 <option value="是">是</option>
@@ -48,11 +48,11 @@
         </div>
         <div>
             <label for="filterStartDate" class="sr-only">开始日期</label>
-            <input type="date" id="filterStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="开始日期">
+            <input type="date" id="filterStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px] dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:[color-scheme:dark]" title="开始日期">
         </div>
         <div>
             <label for="filterEndDate" class="sr-only">结束日期</label>
-            <input type="date" id="filterEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]" title="结束日期">
+            <input type="date" id="filterEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px] dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:[color-scheme:dark]" title="结束日期">
         </div>
         <div>
             <button onclick="applyFilters()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 h-[42px]">
@@ -63,18 +63,18 @@
     <!-- 文章列表表格 -->
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"><input type="checkbox" id="selectAll" class="w-4 h-4"></th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">公众号</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">标题</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">作者</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">发布时间</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">已删除</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">已下载</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase"><input type="checkbox" id="selectAll" class="w-4 h-4"></th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">公众号</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">标题</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">作者</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">发布时间</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">已删除</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">已下载</th>
                 </tr>
             </thead>
-            <tbody id="articleTableBody" class="bg-white divide-y divide-gray-200">
+            <tbody id="articleTableBody" class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                 <!-- 数据由JavaScript填充 -->
             </tbody>
         </table>
@@ -149,19 +149,19 @@ function renderArticles(articles) {
             </td>
             <td class="px-6 py-4">${article.nickname || '-'}</td>
             <td class="px-6 py-4 max-w-md">
-                <a href="${article.article_link}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline">
+                <a href="${article.article_link}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline">
                     ${article.article_title || '-'}
                 </a>
             </td>
             <td class="px-6 py-4">${article.article_author_name || '-'}</td>
             <td class="px-6 py-4 whitespace-nowrap">${article.article_create_time || '-'}</td>
             <td class="px-6 py-4">
-                <span class="px-2 py-1 text-xs rounded-full ${article.article_is_deleted === '是' ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}">
+                <span class="px-2 py-1 text-xs rounded-full ${article.article_is_deleted === '是' ? 'bg-red-200 text-red-800 dark:bg-red-900/60 dark:text-red-300' : 'bg-green-200 text-green-800 dark:bg-green-900/60 dark:text-green-300'}">
                     ${article.article_is_deleted}
                 </span>
             </td>
             <td class="px-6 py-4">
-                <span class="px-2 py-1 text-xs rounded-full ${article.is_downloaded === '是' ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800'}">
+                <span class="px-2 py-1 text-xs rounded-full ${article.is_downloaded === '是' ? 'bg-blue-200 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-100'}">
                     ${article.is_downloaded}
                 </span>
             </td>
@@ -189,9 +189,9 @@ function updatePagination() {
 
     // Styles for buttons
     const baseStyle = 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
-    const btnStyle = `${baseStyle} bg-white border-gray-300 text-gray-700 hover:bg-gray-50`;
-    const activeBtnStyle = `${baseStyle} bg-blue-500 border-blue-500 text-white hover:bg-blue-600`;
-    const disabledBtnStyle = `${baseStyle} bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed`;
+    const btnStyle = `${baseStyle} bg-white border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700`;
+    const activeBtnStyle = `${baseStyle} bg-blue-500 border-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700`;
+    const disabledBtnStyle = `${baseStyle} bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-500`;
     const ellipsisStyle = 'inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 select-none';
 
     const renderButton = (text, page, isDisabled = false, isActive = false) => {
