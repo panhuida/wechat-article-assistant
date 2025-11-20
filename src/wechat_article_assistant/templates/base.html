@@ -6,57 +6,80 @@
     <title>{% block title %}微信公众号文章阅读助手{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <body class="bg-gray-100">
+    <script>
+        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f3f4f6; } /* gray-100 */
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; } /* gray-400 */
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; } /* gray-500 */
+
+        #sidebar {
+            transition: width 0.3s ease-in-out;
+        }
+        #sidebar.collapsed {
+            width: 5rem; /* 80px */
+        }
+        #sidebar.collapsed .sidebar-text, #sidebar.collapsed .sidebar-brand-text {
+            display: none;
+        }
+        #sidebar.collapsed .sidebar-link {
+            justify-content: center;
+        }
+        #sidebar.collapsed .sidebar-link img {
+            margin-right: 0;
+        }
+        #sidebar.collapsed .sidebar-footer {
+            justify-content: center;
+        }
+        #sidebar.collapsed .sidebar-footer .toggle-arrow {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <div class="flex h-screen">
-        <!-- 侧边栏 -->
-        <aside id="sidebar" class="bg-gray-800 text-white w-64 flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out">
-            <!-- 品牌/标题 -->
-            <div class="h-16 flex items-center justify-center border-b border-gray-700 flex-shrink-0">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex flex-col w-64">
+            <div class="flex items-center justify-center p-6 text-2xl font-bold border-b border-gray-200 dark:border-gray-700 h-20">
                 <a href="/" title="点击标题跳转到首页" class="flex items-center">
-                    <h1 class="text-xl font-bold text-center whitespace-nowrap overflow-hidden flex items-center">
-                        <img src="{{ url_for('static', filename='favicon.png') }}" alt="logo" class="h-8 w-8 mr-2">
-                        <span class="menu-text">阅读助手</span>
-                    </h1>
+                    <img src="{{ url_for('static', filename='favicon.png') }}" alt="logo" class="w-8 h-8 mr-2">
+                    <span class="sidebar-brand-text text-blue-600">阅读助手</span>
                 </a>
             </div>
-    
-            <!-- 导航菜单 -->
-            <nav class="flex-grow p-4">
-                <ul class="space-y-2">
-                    <li>
-                        <a href="/wechat" class="nav-link flex items-center px-4 py-2 rounded hover:bg-gray-700">
-                            <img src="{{ url_for('static', filename='wechat.png') }}" alt="公众号管理" class="h-6 w-6 flex-shrink-0">
-                            <span class="ml-3 menu-text whitespace-nowrap">公众号管理</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/articles" class="nav-link flex items-center px-4 py-2 rounded hover:bg-gray-700">
-                            <img src="{{ url_for('static', filename='article.png') }}" alt="公众号文章" class="h-6 w-6 flex-shrink-0">
-                            <span class="ml-3 menu-text whitespace-nowrap">公众号文章</span>
-                        </a>
-                    </li>
-                </ul>
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="/wechat" class="sidebar-link flex items-center px-4 py-2 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-700 {% if request.endpoint == 'wechat_list' %}bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-white{% else %}text-gray-600 dark:text-gray-300{% endif %}">
+                    <img src="{{ url_for('static', filename='wechat.png') }}" alt="公众号管理" class="w-6 h-6 mr-3">
+                    <span class="sidebar-text">公众号管理</span>
+                </a>
+                <a href="/articles" class="sidebar-link flex items-center px-4 py-2 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-700 {% if request.endpoint == 'article_list' %}bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-white{% else %}text-gray-600 dark:text-gray-300{% endif %}">
+                    <img src="{{ url_for('static', filename='article.png') }}" alt="公众号文章" class="w-6 h-6 mr-3">
+                    <span class="sidebar-text">公众号文章</span>
+                </a>
             </nav>
-    
-            <!-- 折叠按钮 -->
-            <div class="p-4 border-t border-gray-700 flex-shrink-0">
-                <button id="sidebar-toggle" class="w-full flex items-center justify-center p-2 rounded hover:bg-gray-700">
-                    <svg id="toggle-icon" class="h-6 w-6 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                    </svg>
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                <button id="sidebar-toggle" type="button" class="sidebar-footer flex items-center w-full py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <svg class="w-6 h-6 toggle-arrow transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+                    <span class="sidebar-text ml-3 text-xs">折叠</span>
                 </button>
             </div>
         </aside>
-    
-        <!-- 主内容区 -->
-        <main class="flex-1 overflow-auto">
-            <div class="container mx-auto p-6">
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col h-screen">
+            <div class="flex-1 p-6 lg:p-8 overflow-y-auto custom-scrollbar">
                 {% block content %}{% endblock %}
             </div>
         </main>
     </div>
 
-    <!-- 通知组件 -->
+    <!-- Notification Component -->
     <div id="notification" class="fixed top-4 right-4 hidden z-50">
         <div class="bg-white rounded-lg shadow-lg p-4 max-w-sm">
             <div class="flex items-center">
@@ -67,47 +90,26 @@
     </div>
 
     <script>
+        // Sidebar Toggle Script (from reference)
         document.addEventListener('DOMContentLoaded', function () {
             const sidebar = document.getElementById('sidebar');
             const toggleButton = document.getElementById('sidebar-toggle');
-            const toggleIcon = document.getElementById('toggle-icon');
-            const menuTexts = document.querySelectorAll('.menu-text');
-            const navLinks = document.querySelectorAll('.nav-link');
 
-            // 从localStorage加载侧边栏状态
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-            if (isCollapsed) {
-                collapseSidebar();
+            // Check for saved state in localStorage
+            if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                sidebar.classList.add('collapsed');
             }
 
-            toggleButton.addEventListener('click', function () {
-                if (sidebar.classList.contains('w-20')) {
-                    expandSidebar();
-                    localStorage.setItem('sidebarCollapsed', 'false');
-                } else {
-                    collapseSidebar();
-                    localStorage.setItem('sidebarCollapsed', 'true');
-                }
-            });
-
-            function collapseSidebar() {
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-20');
-                toggleIcon.classList.add('rotate-180');
-                menuTexts.forEach(text => text.classList.add('hidden'));
-                navLinks.forEach(link => link.classList.add('justify-center'));
-            }
-
-            function expandSidebar() {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-64');
-                toggleIcon.classList.remove('rotate-180');
-                menuTexts.forEach(text => text.classList.remove('hidden'));
-                navLinks.forEach(link => link.classList.remove('justify-center'));
+            if (toggleButton) {
+                toggleButton.addEventListener('click', function () {
+                    sidebar.classList.toggle('collapsed');
+                    const isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('sidebar-collapsed', isCollapsed);
+                });
             }
         });
 
-        // 通知函数
+        // Notification function (from original)
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
             const icon = document.getElementById('notification-icon');
@@ -115,7 +117,7 @@
 
             messageEl.textContent = message;
 
-            // 设置图标和颜色
+            // Set icon and color
             if (type === 'success') {
                 icon.innerHTML = '<svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
             } else if (type === 'error') {
@@ -131,7 +133,7 @@
             }, 3000);
         }
 
-        // API请求辅助函数
+        // API request helper function (from original)
         async function apiRequest(url, options = {}) {
             try {
                 const response = await fetch(url, {
@@ -148,7 +150,6 @@
             }
         }
     </script>
-
     {% block scripts %}{% endblock %}
 </body>
 </html>
