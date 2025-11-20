@@ -22,6 +22,7 @@
 
         #sidebar {
             transition: width 0.3s ease-in-out;
+            width: 12rem; /* 笔记本默认 14rem (w-56) */
         }
         #sidebar.collapsed {
             width: 5rem; /* 80px */
@@ -46,7 +47,7 @@
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <aside id="sidebar" class="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex flex-col w-64">
+        <aside id="sidebar" class="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex flex-col w-56 lg:w-64">
             <div class="flex items-center justify-center p-6 text-2xl font-bold border-b border-gray-200 dark:border-gray-700 h-20">
                 <a href="/" title="点击标题跳转到首页" class="flex items-center">
                     <img src="{{ url_for('static', filename='favicon.png') }}" alt="logo" class="w-8 h-8 mr-2">
