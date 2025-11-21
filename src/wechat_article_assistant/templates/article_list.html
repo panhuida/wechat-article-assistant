@@ -70,7 +70,8 @@
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase"><input type="checkbox" id="selectAll" class="w-4 h-4"></th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">公众号</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">标题</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">文章标题</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">封面</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">作者</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">发布时间</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">已删除</th>
@@ -133,18 +134,26 @@ async function loadArticles() {
     }
 }
 
+// 转换图片URL为代理URL
+function toProxyUrl(url) {
+    if (!url) return url;
+    // 将微信图片URL转换为代理URL
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
 // 渲染文章列表
 function renderArticles(articles) {
     const tbody = document.getElementById('articleTableBody');
     tbody.innerHTML = '';
 
     if (articles.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">暂无数据</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">暂无数据</td></tr>';
         return;
     }
 
     articles.forEach(article => {
         const row = document.createElement('tr');
+        const coverUrl = toProxyUrl(article.article_cover);
         row.innerHTML = `
             <td class="px-6 py-4">
                 <input type="checkbox" class="article-checkbox w-4 h-4" data-id="${article.id}" 
@@ -155,6 +164,10 @@ function renderArticles(articles) {
                 <a href="${article.article_link}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline">
                     ${article.article_title || '-'}
                 </a>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                ${article.article_cover ? `<img src="${coverUrl}" class="w-20 h-14 object-cover rounded" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                <div class="w-20 h-14 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-xs text-gray-400" style="display:none;">无图片</div>` : '<div class="w-20 h-14 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-xs text-gray-400">无图片</div>'}
             </td>
             <td class="px-6 py-4">${article.article_author_name || '-'}</td>
             <td class="px-6 py-4 whitespace-nowrap">${article.article_create_time || '-'}</td>
