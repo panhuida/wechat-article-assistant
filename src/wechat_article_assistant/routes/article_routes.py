@@ -51,6 +51,8 @@ def get_article(article_id: int):
 def delete_articles():
     """批量删除文章"""
     data = request.json
+    if not data:
+        return jsonify({"success": False, "message": "无效的请求数据"})
     article_ids = data.get("ids", [])
 
     if not article_ids:
@@ -85,6 +87,8 @@ def collect_recent():
 def download_articles():
     """批量下载文章"""
     data = request.json
+    if not data:
+        return jsonify({"success": False, "message": "无效的请求数据"})
     article_ids = data.get("ids", [])
 
     if not article_ids:

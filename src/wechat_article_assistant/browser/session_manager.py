@@ -48,7 +48,7 @@ class SessionManager:
         """
         try:
             session_data = {"cookies": cookies, "token": token, "other_data": other_data or {}}
-            with open(self.session_file, "w", encoding="utf-8") as f:
+            with self.session_file.open("w", encoding="utf-8") as f:
                 json.dump(session_data, f, ensure_ascii=False, indent=2)
 
             # 更新缓存
@@ -85,7 +85,7 @@ class SessionManager:
                 self._cached_session = None
                 return None
 
-            with open(self.session_file, encoding="utf-8") as f:
+            with self.session_file.open(encoding="utf-8") as f:
                 session_data = cast(dict[str, Any], json.load(f))
 
             # 更新缓存
@@ -140,8 +140,4 @@ class SessionManager:
             return False
 
         # 检查必要字段
-        if "cookies" not in session_data or not session_data["cookies"]:
-            return False
-
-        # 可以添加更多验证逻辑，比如检查过期时间等
-        return True
+        return "cookies" in session_data and bool(session_data["cookies"])

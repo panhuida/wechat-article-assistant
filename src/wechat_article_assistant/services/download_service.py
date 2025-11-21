@@ -68,7 +68,7 @@ class DownloadService:
             img_filename = f"image_{img_index}{ext}"
             img_path = assets_dir / img_filename
 
-            with open(img_path, "wb") as f:
+            with img_path.open("wb") as f:
                 for chunk in img_response.iter_content(1024):
                     f.write(chunk)
 
@@ -178,7 +178,7 @@ class DownloadService:
                             css_filename = f"{Path(css_filename).stem}_{hash(css_url) % 10000}{Path(css_filename).suffix}"
                             css_path = assets_dir / css_filename
 
-                            with open(css_path, "w", encoding="utf-8") as f:
+                            with css_path.open("w", encoding="utf-8") as f:
                                 f.write(css_response.text)
 
                             relative_css_path = css_path.relative_to(account_dir)
@@ -239,13 +239,13 @@ class DownloadService:
                     script.decompose()
 
             # 保存修改后的HTML
-            with open(article_path, "w", encoding="utf-8") as f:
+            with article_path.open("w", encoding="utf-8") as f:
                 f.write(str(soup))
 
             # 保存元数据文件
             meta_path = account_dir / f"{base_filename}.html.meta.json"
             meta_data = {"source_url": article_url}
-            with open(meta_path, "w", encoding="utf-8") as f:
+            with meta_path.open("w", encoding="utf-8") as f:
                 json.dump(meta_data, f, ensure_ascii=False, indent=4)
 
             logger.info(f"文章下载成功: {article_path}")
@@ -312,7 +312,7 @@ class DownloadService:
             (成功数量, 失败数量, 错误消息列表)
         """
         try:
-            with open(file_path, encoding="utf-8") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 lines = f.readlines()
 
             # 过滤注释和空行

@@ -1,6 +1,5 @@
 """文件操作辅助工具"""
 
-import os
 import re
 from pathlib import Path
 
@@ -45,7 +44,7 @@ def get_file_extension(url: str) -> str:
         文件扩展名（包含.）
     """
     path = url.split("?")[0]  # 移除查询参数
-    ext = os.path.splitext(path)[1]
+    ext = Path(path).suffix
     return ext if ext else ".jpg"  # 默认为jpg
 
 
@@ -64,7 +63,8 @@ def get_unique_filename(directory: Path, filename: str) -> Path:
     if not path.exists():
         return path
 
-    name, ext = os.path.splitext(filename)
+    p = Path(filename)
+    name, ext = p.stem, p.suffix
     counter = 1
     while True:
         new_filename = f"{name}_{counter}{ext}"

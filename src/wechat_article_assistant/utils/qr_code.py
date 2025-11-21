@@ -4,6 +4,7 @@ import base64
 from io import BytesIO
 
 import qrcode
+from qrcode.constants import ERROR_CORRECT_L
 
 
 def generate_qr_code(data: str, size: int = 300) -> str:
@@ -19,7 +20,7 @@ def generate_qr_code(data: str, size: int = 300) -> str:
     """
     qr = qrcode.QRCode(
         version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        error_correction=ERROR_CORRECT_L,
         box_size=10,
         border=4,
     )

@@ -4,27 +4,57 @@
 
 ## 📦 安装步骤
 
-### 1. 安装Python依赖
+### 方式一：使用 uv（推荐，更快）
 
 ```bash
+# 安装 uv
+pip install uv
+
+# 自动安装所有依赖
+uv sync
+
+
+# 或使用脚本
+# Windows
+.\scripts\setup-uv.ps1
+
+# Linux/macOS
+./scripts/setup-uv.sh
+```
+
+### 方式二：使用传统 pip
+
+```bash
+# 安装项目依赖
+pip install -e .
+
+# 或使用 requirements.txt
 pip install -r requirements.txt
 ```
 
-### 2. 安装Playwright浏览器
+### 安装 Playwright 浏览器
 
 ```bash
 playwright install chromium
 ```
 
-### 3. 配置环境变量（可选）
+### 配置环境变量（可选）
 
 ```bash
 cp .env.example .env
 ```
 
-如需修改配置，编辑 `.env` 文件。
+如需修改配置（如端口、日志级别等），编辑 `.env` 文件。常用配置：
+
+```env
+FLASK_DEBUG=True          # 开发模式
+LOG_LEVEL=INFO           # 日志级别
+DOWNLOAD_DIR=data/downloads  # 下载目录
+```
 
 ## 🚀 启动应用
+
+### Web 应用模式
 
 ```bash
 python run.py
@@ -32,97 +62,116 @@ python run.py
 
 启动成功后，在浏览器中访问：**http://localhost:5000**
 
-## 📖 使用教程
+看到欢迎界面即表示启动成功！🎉
 
-### 第一步：添加公众号
+### 命令行模式
 
-1. 点击左侧菜单的"公众号管理"
-2. 点击"新增公众号"按钮
-3. 选择添加方式：
+适合快速下载文章，无需启动 Web 服务：
 
-#### 方式一：手工录入
-- 填写公众号名称（必填）
-- 填写其他信息（可选）
-- 点击"保存"
+```bash
+# 下载单篇文章
+python wechat-cli.py download "https://mp.weixin.qq.com/s/xxxxx"
 
-#### 方式二：自动获取（推荐）
-- 点击"自动获取"标签
-- 输入公众号名称关键词
-- 点击"搜索"
-- **首次使用需要扫码登录微信公众平台**
-- 从搜索结果中选择目标公众号
-- 信息自动填充后点击"保存"
+# 批量下载
+python wechat-cli.py download --file urls.txt
+```
 
-### 第二步：采集文章
+详见下方"命令行工具"部分。
 
-在公众号列表中：
 
-#### 单页采集
-- 点击某个公众号后面的"单页采集"按钮
-- 采集指定数量的文章（默认5篇）
-- 适合快速测试或定期更新
-
-#### 全部采集
-- 点击"全部采集"按钮
-- 循环采集该公众号的所有历史文章
-- 适合首次采集完整历史文章
-
-**注意**：采集需要有效的登录会话，如果会话失效，会提示重新登录。
-
-### 第三步：查看和下载文章
-
-1. 点击左侧菜单的"文章列表"
-2. 使用搜索和筛选功能查找文章：
-   - 在搜索框输入关键词（按回车搜索）
-   - 使用下拉菜单筛选公众号、是否删除、是否下载
-   - 选择日期范围筛选
-   - 点击"查询"按钮
-
-3. 选择要下载的文章：
-   - 勾选单个文章的复选框
-   - 或点击"全选"选中当前页所有文章
-
-4. 点击"下载选中"按钮批量下载
-
-**下载说明**：
-- 文章和图片会保存到 `data/downloads/公众号名称/` 目录
-- 图片保存在 `images/` 子目录
-- HTML文件中的图片链接已替换为本地相对路径
 
 ## 💻 命令行工具
+
+命令行工具适合快速下载文章，无需启动 Web 服务。
+
+### 基本用法
+
+```bash
+# 查看帮助
+python wechat-cli.py --help
+python wechat-cli.py download --help
+```
 
 ### 下载单篇文章
 
 ```bash
-python -m wechat_article_assistant download https://mp.weixin.qq.com/s/xxxxx
+python wechat-cli.py download "https://mp.weixin.qq.com/s/xxxxx"
 ```
 
-### 批量下载
+### 批量下载文章
 
-创建一个文本文件 `urls.txt`，每行一个文章链接：
+1. 创建文本文件 `urls.txt`，每行一个文章链接：
 
-```
+```text
 https://mp.weixin.qq.com/s/xxxxx
 https://mp.weixin.qq.com/s/yyyyy
 https://mp.weixin.qq.com/s/zzzzz
 ```
 
-然后执行：
+2. 执行批量下载：
 
 ```bash
-python -m wechat_article_assistant download --file urls.txt
+python wechat-cli.py download --file urls.txt
+```
+
+或使用简写：
+
+```bash
+python wechat-cli.py download -f urls.txt
 ```
 
 ### 指定输出目录
 
 ```bash
-python -m wechat_article_assistant download <url> --output ./my_articles
+# 下载到指定目录
+python wechat-cli.py download "url" --output ./my_articles
+python wechat-cli.py download -f urls.txt -o ./downloads
 ```
 
 ### 显示详细日志
 
 ```bash
-python -m wechat_article_assistant download <url> --verbose
+# 查看详细的下载过程
+python wechat-cli.py download "url" --verbose
+python wechat-cli.py download -f urls.txt -v
+```
+
+### 组合使用
+
+```bash
+# 批量下载 + 自定义目录 + 详细日志
+python wechat-cli.py download -f urls.txt -o ./articles -v
+```
+
+### 下载结果
+
+命令行工具会显示：
+- ✅ 成功下载的文章数量
+- ❌ 失败的文章数量及错误信息
+- 📁 文章保存路径
+- ⏱️ 总耗时统计
+
+示例输出：
+```
+============================================================
+从文件读取URL: urls.txt
+============================================================
+
+[1/3] 正在下载: 文章标题1
+✅ 下载成功: ./downloads/文章标题1.html
+
+[2/3] 正在下载: 文章标题2
+✅ 下载成功: ./downloads/文章标题2.html
+
+[3/3] 正在下载: 文章标题3
+✅ 下载成功: ./downloads/文章标题3.html
+
+============================================================
+下载完成!
+============================================================
+成功: 3 篇
+失败: 0 篇
+总耗时: 15.3 秒
 ```
 
 ## 🔑 重要提示
@@ -130,114 +179,161 @@ python -m wechat_article_assistant download <url> --verbose
 ### 关于登录
 
 1. **首次使用**需要扫码登录微信公众平台
-2. 登录会话会保存在 `data/wechat_session.json`
-3. 会话有一定有效期，失效后需要重新登录
-4. **不要分享会话文件**，它包含您的登录凭证
+   - 在添加公众号时点击"从公众平台获取"
+   - 系统会显示二维码
+   - 使用微信扫码登录
 
-### 关于采集
+2. **登录会话**会自动保存
+   - 会话文件：`data/wechat_session.json`
+   - 会话有效期通常为几天到几周
+   - 失效后会提示重新登录
 
-1. **采集频率**：建议不要过于频繁采集，避免被微信限制
-2. **采集速度**：全部采集可能需要较长时间，请耐心等待
-3. **采集失败**：如遇失败，检查登录状态和网络连接
+3. **安全建议**
+   - ⚠️ **不要分享会话文件**，它包含您的登录凭证
+   - 不要在公共环境使用
+   - 定期更新密码提高安全性
 
-### 关于下载
 
-1. **存储空间**：图片较多的文章会占用较大空间
-2. **下载时间**：批量下载可能需要较长时间
-3. **文件位置**：默认保存在 `data/downloads/` 目录
 
-## 📁 目录说明
 
-```
-wechat-article-assistant/
-├── data/
-│   ├── wechat_assistant.db      # 数据库文件
-│   ├── wechat_session.json      # 登录会话（自动生成）
-│   └── downloads/               # 下载的文章
-│       └── 公众号名称/
-│           ├── images/          # 图片目录
-│           └── 文章标题.html     # 文章HTML文件
-├── logs/
-│   ├── app.log                  # 应用日志
-│   ├── collect.log              # 采集日志
-│   └── download.log             # 下载日志
-└── ...
-```
 
 ## ⚠️ 常见问题
 
 ### Q1: 启动时提示端口被占用
 
-**A:** 修改 `run.py` 中的端口号，或关闭占用5000端口的程序。
+**问题**：`Address already in use` 或端口 5000 被占用
+
+**解决方案**：
+```bash
+# 方案1: 修改端口（编辑 run.py）
+app.run(host="0.0.0.0", port=5001, debug=config.DEBUG)
+
+# 方案2: 查找并关闭占用端口的进程
+# Windows
+netstat -ano | findstr :5000
+taskkill /PID <进程ID> /F
+
+# Linux/macOS
+lsof -i :5000
+kill -9 <PID>
+```
 
 ### Q2: 无法连接到微信公众平台
 
-**A:** 检查网络连接，确保可以访问 https://mp.weixin.qq.com
+**问题**：采集时提示连接失败
 
-### Q3: Playwright浏览器无法启动
+**解决方案**：
+1. 检查网络连接，确保可以访问 https://mp.weixin.qq.com
+2. 检查是否有代理或防火墙拦截
+3. 尝试在浏览器中手动访问该网站
+4. 检查 hosts 文件是否有相关配置
 
-**A:** 重新安装浏览器：
+### Q3: Playwright 浏览器无法启动
+
+**问题**：`Executable doesn't exist` 或浏览器启动失败
+
+**解决方案**：
 ```bash
-playwright install --force chromium
+# 重新安装浏览器
+playwright install chromium
+
+# 如果还不行，安装系统依赖（Linux）
 playwright install-deps chromium
+
+# 强制重新安装
+playwright install --force chromium
 ```
 
-### Q4: 采集时提示"请先登录"
+### Q4: 采集时提示"请先登录"或"会话失效"
 
-**A:** 会话已失效，需要重新扫码登录。
+**问题**：之前登录过，但现在提示需要登录
+
+**解决方案**：
+1. 删除会话文件：`data/wechat_session.json`
+2. 重新在界面上进行扫码登录
+3. 确保扫码时使用正确的微信账号
+4. 检查 `data` 目录是否有写入权限
 
 ### Q5: 下载的图片无法显示
 
-**A:** 确保HTML文件和images目录在同一个公众号文件夹下，保持相对路径正确。
+**问题**：打开 HTML 文件后图片不显示
+
+**解决方案**：
+1. 确保 HTML 文件和 `images/` 目录在同一个文件夹
+2. 不要移动文件位置，保持相对路径关系
+3. 检查 `images/` 目录中是否有图片文件
+4. 确保图片文件没有被防病毒软件删除
 
 ### Q6: 数据库锁定错误
 
-**A:** 不要同时进行多个采集或下载操作，SQLite不支持高并发写操作。
+**问题**：`database is locked` 错误
+
+**解决方案**：
+1. 不要同时进行多个采集或下载操作
+2. SQLite 不支持高并发写操作
+3. 等待当前操作完成后再进行下一个
+4. 确保没有多个程序实例同时运行
+5. 重启应用可以释放锁
+
+### Q7: 采集到的文章数量为 0
+
+**问题**：采集完成但没有新文章
+
+**可能原因**：
+1. 该公众号最近没有发布新文章
+2. 所有文章都已经采集过（自动去重）
+3. Fakeid 不正确，无法获取文章列表
+4. 登录会话问题
+
+**解决方案**：
+1. 检查该公众号是否真的有文章
+2. 查看日志文件了解详细信息：`logs/collect.log`
+3. 确认 Fakeid 是否正确
+4. 尝试重新登录
+
+### Q8: 命令行工具无法使用
+
+**问题**：`ModuleNotFoundError` 或导入错误
+
+**解决方案**：
+```bash
+# 确保已经安装项目
+pip install -e .
+
+# 或者使用完整路径
+python wechat-cli.py download "url"
+
+# 检查 Python 环境
+python --version  # 需要 3.12+
+```
+
+### Q9: 内存占用过高
+
+**问题**：采集或下载时内存占用很大
+
+**解决方案**：
+1. 这是正常现象，Playwright 浏览器会占用内存
+2. 采集完成后浏览器会自动关闭，释放内存
+3. 减少批量操作的数量
+4. 分批次进行采集和下载
+
+### Q10: 日志文件过大
+
+**问题**：`logs/` 目录占用空间过大
+
+**解决方案**：
+```bash
+# 可以安全删除旧日志
+# Windows
+del logs\*.log
+
+# Linux/macOS
+rm logs/*.log
+
+# 或者使用日志轮转（未来版本会支持）
+```
 
 ## 📚 进一步学习
 
 - 查看 [README.md](../README.md) 了解项目详情
-- 查看 [API.md](./API.md) 了解API接口
-- 查看 [DEPLOYMENT.md](./DEPLOYMENT.md) 了解部署方法
 - 查看 [DEVELOPMENT.md](./DEVELOPMENT.md) 了解开发指南
-
-## 💡 使用技巧
-
-1. **定期备份**：定期备份 `data/` 目录，防止数据丢失
-2. **批量操作**：利用筛选功能，可以批量处理特定条件的文章
-3. **日志查看**：遇到问题时查看 `logs/` 目录下的日志文件
-4. **命令行工具**：对于临时下载需求，使用命令行工具更方便
-5. **采集策略**：新公众号先单页采集测试，确认无误后再全部采集
-
-## 🎯 最佳实践
-
-1. **首次使用**：
-   - 先添加1-2个公众号测试
-   - 进行单页采集验证功能
-   - 下载几篇文章检查效果
-   - 确认无误后批量添加公众号
-
-2. **日常使用**：
-   - 定期（如每周）采集新文章
-   - 及时下载感兴趣的文章
-   - 定期清理不需要的文章记录
-   - 定期备份数据
-
-3. **性能优化**：
-   - 避免同时采集多个公众号
-   - 下载文章时分批次进行
-   - 定期清理日志文件
-
-## 🆘 获取帮助
-
-如果遇到问题：
-
-1. 查看本快速开始指南
-2. 查看常见问题部分
-3. 查看日志文件了解详细错误
-4. 查阅完整文档
-5. 提交Issue到项目仓库
-
----
-
-**祝您使用愉快！** 📖✨

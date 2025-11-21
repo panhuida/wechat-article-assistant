@@ -4,9 +4,9 @@ from typing import Any
 
 from ..models import WechatAccount, get_db
 from ..utils.logger import get_module_logger
+from ..utils.validators import validate_required
 
 logger = get_module_logger(__name__)
-from ..utils.validators import validate_required
 
 
 class WechatService:
@@ -95,7 +95,7 @@ class WechatService:
                 db.refresh(account)
 
                 logger.info(f"创建公众号成功: {account.nickname}")
-                return True, "创建成功", int(account.id)
+                return True, "创建成功", int(account.id)  # type: ignore
 
         except Exception as e:
             logger.error(f"创建公众号失败: {e}")

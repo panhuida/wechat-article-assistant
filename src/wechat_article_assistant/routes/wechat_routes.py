@@ -32,6 +32,8 @@ def get_account(account_id: int):
 def create_account():
     """创建公众号"""
     data = request.json
+    if not data:
+        return jsonify({"success": False, "message": "无效的请求数据"})
     success, message, account_id = wechat_service.create_account(data)
     return jsonify({"success": success, "message": message, "id": account_id})
 
@@ -40,6 +42,8 @@ def create_account():
 def update_account(account_id: int):
     """更新公众号"""
     data = request.json
+    if not data:
+        return jsonify({"success": False, "message": "无效的请求数据"})
     success, message = wechat_service.update_account(account_id, data)
     return jsonify({"success": success, "message": message})
 
@@ -55,6 +59,8 @@ def delete_account(account_id: int):
 def search_account():
     """搜索公众号（自动处理登录）"""
     data = request.json
+    if not data:
+        return jsonify({"success": False, "message": "无效的请求数据"})
     query = data.get("query", "")
 
     if not query:

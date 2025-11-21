@@ -90,10 +90,10 @@ class WechatAccount(Base):
             "count": self.count,
             "collect_status": self.collect_status,
             "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S")
-            if self.create_time
+            if self.create_time is not None
             else None,
             "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
-            if self.update_time
+            if self.update_time is not None
             else None,
         }
 
@@ -138,17 +138,17 @@ class WechatArticle(Base):
             "article_author_name": self.article_author_name,
             "article_is_deleted": self.article_is_deleted,
             "article_create_time": self.article_create_time.strftime("%Y-%m-%d %H:%M:%S")
-            if self.article_create_time
+            if self.article_create_time is not None
             else None,
             "article_update_time": self.article_update_time.strftime("%Y-%m-%d %H:%M:%S")
-            if self.article_update_time
+            if self.article_update_time is not None
             else None,
             "is_downloaded": self.is_downloaded,
             "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S")
-            if self.create_time
+            if self.create_time is not None
             else None,
             "update_time": self.update_time.strftime("%Y-%m-%d %H:%M:%S")
-            if self.update_time
+            if self.update_time is not None
             else None,
         }
 

@@ -4,10 +4,9 @@ import json
 import random
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import requests
-from flask import jsonify
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -179,15 +178,15 @@ class ArticleService:
         try:
             # 确保已认证（自动处理会话复用和登录）
             if not self.wechat_auth.ensure_authenticated():
-                return jsonify({"success": False, "message": "认证失败，请重试"})
+                return False, "认证失败，请重试", 0
 
             # 加载会话
             session_data = self.wechat_auth.get_session_data()
             if not session_data:
-                return jsonify({"success": False, "message": "获取会话数据失败"})
+                return False, "获取会话数据失败", 0
 
             # 调用内部方法执行采集
-            return self._collect_single_page_with_session(account_id, session_data)
+            return self._collect_single_page_with_session(cast(int, account_id), session_data)
 
         except Exception as e:
             logger.error(f"采集文章失败: {e}")
@@ -297,12 +296,12 @@ class ArticleService:
 
             # 确保已认证（自动处理会话复用和登录）
             if not self.wechat_auth.ensure_authenticated():
-                return jsonify({"success": False, "message": "认证失败，请重试"})
+                return False, "认证失败，请重试", 0
 
             # 加载会话
             session_data = self.wechat_auth.get_session_data()
             if not session_data:
-                return jsonify({"success": False, "message": "获取会话数据失败"})
+                return False, "获取会话数据失败", 0
 
             logger.info("会话加载成功，开始循环采集")
 
@@ -412,12 +411,12 @@ class ArticleService:
 
             # 确保已认证（自动处理会话复用和登录）
             if not self.wechat_auth.ensure_authenticated():
-                return jsonify({"success": False, "message": "认证失败，请重试"})
+                return False, "认证失败，请重试", {}
 
             # 加载会话
             session_data = self.wechat_auth.get_session_data()
             if not session_data:
-                return jsonify({"success": False, "message": "获取会话数据失败"})
+                return False, "获取会话数据失败", {}
 
             # 获取所有公众号
             with get_db() as db:

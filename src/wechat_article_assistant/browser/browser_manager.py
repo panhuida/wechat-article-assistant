@@ -114,7 +114,7 @@ class BrowserManager:
             cookies: Cookie列表
         """
         if self.context:
-            self.context.add_cookies(cookies)
+            self.context.add_cookies(cookies)  # type: ignore
             logger.info(f"已设置 {len(cookies)} 个Cookies")
 
     def __enter__(self):

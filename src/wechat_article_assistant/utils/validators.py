@@ -14,9 +14,7 @@ def validate_required(value: str | None, field_name: str) -> bool:
     Returns:
         验证是否通过
     """
-    if not value or not str(value).strip():
-        return False
-    return True
+    return bool(value and str(value).strip())
 
 
 def validate_url(url: str | None) -> bool:
