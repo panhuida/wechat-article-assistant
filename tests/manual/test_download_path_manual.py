@@ -22,7 +22,7 @@ print()
 
 # 检查是否是目标路径
 expected_path = Path("E:/documents/文摘/公众号")
-if config.DOWNLOAD_DIR == expected_path:
+if expected_path == config.DOWNLOAD_DIR:
     print("✅ 配置正确！下载路径已设置为: E:/documents/文摘/公众号")
 else:
     print(f"⚠️  当前路径: {config.DOWNLOAD_DIR}")

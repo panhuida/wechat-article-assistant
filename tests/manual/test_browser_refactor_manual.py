@@ -18,10 +18,10 @@ def test_singleton():
     print("=" * 60)
     print("测试1: BrowserManager 单例模式")
     print("=" * 60)
-    
+
     bm1 = BrowserManager()
     bm2 = BrowserManager()
-    
+
     assert bm1 is bm2, "单例模式失败"
     print("✓ 单例模式工作正常")
     print(f"  实例1 ID: {id(bm1)}")
@@ -34,19 +34,21 @@ def test_session_manager():
     print("=" * 60)
     print("测试2: SessionManager 基本功能")
     print("=" * 60)
-    
+
     sm = SessionManager()
-    print(f"✓ SessionManager 初始化成功")
+    print("✓ SessionManager 初始化成功")
     print(f"  会话文件路径: {sm.session_file}")
-    
+
     # 检查会话状态
     is_valid = sm.is_session_valid()
     print(f"  当前会话有效: {is_valid}")
-    
+
     if is_valid:
         session = sm.load_session()
         print(f"  会话中包含 {len(session.get('cookies', []))} 个cookies")
-        print(f"  Token: {session.get('token', 'None')[:20] if session.get('token') else 'None'}...")
+        print(
+            f"  Token: {session.get('token', 'None')[:20] if session.get('token') else 'None'}..."
+        )
     print()
 
 
@@ -55,13 +57,13 @@ def test_authenticator():
     print("=" * 60)
     print("测试3: WechatAuthenticator 初始化")
     print("=" * 60)
-    
+
     auth = WechatAuthenticator()
     print("✓ WechatAuthenticator 初始化成功")
     print(f"  登录URL: {auth.login_url}")
     print(f"  SessionManager: {type(auth.session_manager).__name__}")
     print(f"  BrowserManager: {type(auth.browser_manager).__name__}")
-    
+
     # 验证单例
     assert auth.browser_manager is BrowserManager(), "BrowserManager 不是单例"
     print("✓ BrowserManager 单例验证成功")
@@ -73,9 +75,9 @@ def test_structure():
     print("=" * 60)
     print("测试4: 模块结构检查")
     print("=" * 60)
-    
+
     from wechat_article_assistant import browser
-    
+
     expected_attrs = ["BrowserManager", "SessionManager", "WechatAuthenticator"]
     for attr in expected_attrs:
         assert hasattr(browser, attr), f"模块缺少 {attr}"
@@ -88,13 +90,13 @@ def main():
     print("\n" + "=" * 60)
     print("开始测试重构后的browser包")
     print("=" * 60 + "\n")
-    
+
     try:
         test_singleton()
         test_session_manager()
         test_authenticator()
         test_structure()
-        
+
         print("=" * 60)
         print("✅ 所有测试通过！")
         print("=" * 60)
@@ -105,16 +107,17 @@ def main():
         print("4. ✓ 移除二维码弹窗功能")
         print("5. ✓ 搜索接口自动处理认证")
         print()
-        
+
     except AssertionError as e:
         print(f"\n❌ 测试失败: {e}")
         return 1
     except Exception as e:
         print(f"\n❌ 发生错误: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
-    
+
     return 0
 
 

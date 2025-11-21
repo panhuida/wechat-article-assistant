@@ -23,21 +23,59 @@ source venv/bin/activate
 
 ### 3. 安装依赖
 
+**使用传统的 pip：**
+
 ```bash
-# 安装运行依赖
-pip install -r requirements.txt
+# 安装项目（包含所有依赖）
+pip install -e .
 
 # 安装开发依赖
-pip install ruff mypy pytest pytest-cov
+pip install -e ".[dev]"
+
+# 或者使用 requirements.txt
+pip install -r requirements.txt
 ```
 
-### 4. 配置环境变量
+### 4. 安装 Playwright 浏览器
+
+```bash
+# 安装浏览器驱动
+playwright install chromium
+```
+
+### 5. 配置环境变量
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，设置 `FLASK_DEBUG=True`。
+编辑 `.env` 文件，根据需要修改配置：
+
+```env
+FLASK_APP=src.wechat_article_assistant.app
+FLASK_ENV=development
+FLASK_DEBUG=True
+SECRET_KEY=your-secret-key-here
+
+DATABASE_URL=sqlite:///data/wechat_assistant.db
+LOG_LEVEL=INFO
+LOG_DIR=logs
+DOWNLOAD_DIR=data/downloads
+
+WECHAT_MP_URL=https://mp.weixin.qq.com
+SESSION_FILE=data/wechat_session.json
+```
+
+### 6. 运行应用
+
+```bash
+# Web 应用
+python run.py
+
+# 或使用命令行工具
+python wechat-cli.py download <article_url>
+python wechat-cli.py download --file urls.txt
+```
 
 ## 项目结构说明
 
@@ -64,7 +102,7 @@ wechat-article-assistant/
 │   ├── browser/                 # 浏览器自动化
 │   │   ├── __init__.py
 │   │   ├── browser_manager.py   # 浏览器管理
-│   │   ├── wechat_login.py      # 微信登录
+│   │   ├── wechat_authenticator.py  # 微信认证
 │   │   └── session_manager.py   # 会话管理
 │   │
 │   ├── utils/                   # 工具类
@@ -81,11 +119,30 @@ wechat-article-assistant/
 │   │   └── article_list.html
 │   │
 │   └── static/                  # 静态资源
+│       ├── favicon.png
+│       ├── wechat.png
+│       └── article.png
 │
 ├── tests/                       # 测试
+│   ├── conftest.py              # pytest配置
+│   ├── test_models/             # 模型测试
+│   ├── test_routes/             # 路由测试
+│   ├── test_services/           # 服务测试
+│   └── manual/                  # 手动测试（不自动运行）
+│
+├── scripts/                     # 工具脚本
+│   ├── setup-uv.ps1             # Windows uv 安装脚本
+│   ├── setup-uv.sh              # Linux/macOS uv 安装脚本
+│   └── diagnose.py              # 诊断脚本
+│
 ├── docs/                        # 文档
 ├── data/                        # 数据目录
-└── logs/                        # 日志目录
+├── logs/                        # 日志目录
+├── pyproject.toml               # 项目配置
+├── requirements.txt             # 依赖列表
+├── run.py                       # Web应用启动脚本
+├── wechat-cli.py                # 命令行工具入口
+└── urls.txt.example             # URL列表示例
 ```
 
 ## 代码规范
@@ -105,13 +162,21 @@ ruff check .
 ruff check --fix .
 ```
 
-### 类型提示
+### 类型检查
 
-使用类型提示并通过 mypy 进行检查：
+项目支持两种类型检查工具：
 
+**使用 mypy：**
 ```bash
 mypy src
 ```
+
+**使用 pyright：**
+```bash
+pyright
+```
+
+配置详见 `pyproject.toml` 中的 `[tool.mypy]` 和 `[tool.pyright]` 部分。
 
 ### 注释规范
 
@@ -142,36 +207,77 @@ def example_function(param1: str, param2: int) -> bool:
 ### 运行测试
 
 ```bash
-# 运行所有测试
+# 运行所有测试（自动跳过 manual 目录）
 pytest
 
 # 运行特定测试文件
-pytest tests/test_models.py
+pytest tests/test_models/test_models.py
+
+# 运行特定测试目录
+pytest tests/test_routes/
 
 # 显示详细输出
 pytest -v
 
 # 生成覆盖率报告
-pytest --cov=src --cov-report=html
+pytest --cov=wechat_article_assistant --cov-report=html
+
+# 运行标记的测试
+pytest -m "not slow"  # 排除慢速测试
+pytest -m integration  # 只运行集成测试
 ```
+
+### 测试目录结构
+
+- `tests/test_models/` - 数据模型测试
+- `tests/test_routes/` - API 路由测试
+- `tests/test_services/` - 业务逻辑测试
+- `tests/manual/` - 手动测试（不会自动运行）
 
 ### 编写测试
 
-测试文件放在 `tests/` 目录下，使用 pytest 框架。
+测试文件放在 `tests/` 目录下，使用 pytest 框架。测试配置在 `pyproject.toml` 中。
 
-示例：
+**示例 - 路由测试：**
 
 ```python
-def test_create_account(client):
+def test_create_wechat_account(client):
     """测试创建公众号"""
-    response = client.post('/api/wechat/create', json={
+    response = client.post('/api/wechat/accounts', json={
         'nickname': '测试公众号',
-        'begin': 0,
-        'count': 5
+        'fakeid': 'test_fakeid'
     })
     assert response.status_code == 200
     data = response.get_json()
     assert data['success'] is True
+```
+
+**示例 - 服务测试：**
+
+```python
+from wechat_article_assistant.services.article_service import ArticleService
+
+def test_article_service(db_session):
+    """测试文章服务"""
+    service = ArticleService(db_session)
+    articles = service.get_articles(limit=10)
+    assert isinstance(articles, list)
+```
+
+**测试标记：**
+
+```python
+import pytest
+
+@pytest.mark.slow
+def test_slow_operation():
+    """慢速测试"""
+    pass
+
+@pytest.mark.integration
+def test_integration():
+    """集成测试"""
+    pass
 ```
 
 ## 数据库
@@ -180,15 +286,41 @@ def test_create_account(client):
 
 使用 SQLAlchemy ORM 定义数据模型，位于 `src/wechat_article_assistant/models.py`。
 
+主要模型：
+- `WeChatAccount` - 微信公众号账号
+- `Article` - 文章信息
+
+### 数据库操作
+
+```python
+from wechat_article_assistant.models import db_session, WeChatAccount, Article
+
+# 查询
+accounts = db_session.query(WeChatAccount).all()
+
+# 创建
+account = WeChatAccount(nickname="测试", fakeid="test123")
+db_session.add(account)
+db_session.commit()
+
+# 更新
+account.nickname = "新名称"
+db_session.commit()
+
+# 删除
+db_session.delete(account)
+db_session.commit()
+```
+
 ### 数据库迁移
 
-当前使用 SQLite，模型变更时需要：
+当前使用 SQLite，模型变更时：
 
 1. 修改 `models.py` 中的模型定义
-2. 删除现有数据库文件（开发环境）
-3. 重新运行应用以创建新表结构
+2. 开发环境可以删除数据库文件重建
+3. 生产环境建议备份后手动迁移
 
-未来可以考虑使用 Alembic 进行数据库迁移管理。
+**未来计划**：集成 Alembic 进行自动化迁移管理。
 
 ## API 设计
 
@@ -249,6 +381,7 @@ app_logger.error("操作失败", exc_info=True)
 
 ```env
 FLASK_DEBUG=True
+FLASK_ENV=development
 ```
 
 ### 日志调试
@@ -257,6 +390,16 @@ FLASK_DEBUG=True
 
 ```env
 LOG_LEVEL=DEBUG
+```
+
+查看日志文件：
+
+```bash
+# Windows
+type logs\app.log
+
+# Linux/macOS
+tail -f logs/app.log
 ```
 
 ### IDE 调试
@@ -271,22 +414,38 @@ LOG_LEVEL=DEBUG
     "configurations": [
         {
             "name": "Python: Flask",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
-            "module": "flask",
+            "program": "${workspaceFolder}/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
             "env": {
-                "FLASK_APP": "src.wechat_article_assistant.app",
                 "FLASK_DEBUG": "1"
-            },
-            "args": [
-                "run",
-                "--no-debugger",
-                "--no-reload"
-            ],
-            "jinja": true
+            }
+        },
+        {
+            "name": "Python: CLI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/wechat-cli.py",
+            "console": "integratedTerminal",
+            "args": ["download", "--help"]
         }
     ]
 }
+```
+
+#### PyCharm
+
+1. 右键点击 `run.py` → Run 'run'
+2. 或配置 Python 运行配置，脚本路径选择 `run.py`
+
+### 诊断工具
+
+运行诊断脚本检查环境：
+
+```bash
+python scripts/diagnose.py
 ```
 
 ## 贡献指南
@@ -324,43 +483,303 @@ docs: 更新API文档
 ### Q: 如何添加新的路由？
 
 A: 
-1. 在 `routes/` 目录创建新的路由文件
+1. 在 `routes/` 目录创建或编辑路由文件
 2. 定义 Blueprint 和路由处理函数
 3. 在 `app.py` 中注册 Blueprint
+
+示例：
+```python
+# routes/new_routes.py
+from flask import Blueprint, jsonify
+
+bp = Blueprint('new', __name__, url_prefix='/api/new')
+
+@bp.route('/test')
+def test():
+    return jsonify({'message': 'success'})
+
+# app.py
+from .routes import new_routes
+app.register_blueprint(new_routes.bp)
+```
 
 ### Q: 如何添加新的数据模型？
 
 A:
 1. 在 `models.py` 中定义新的模型类
 2. 继承 `Base` 类
-3. 定义表名和字段
-4. 重新初始化数据库
+3. 定义 `__tablename__` 和字段
+4. 开发环境删除数据库文件重建
+
+示例：
+```python
+class NewModel(Base):
+    __tablename__ = "new_models"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
+```
 
 ### Q: 如何修改前端页面？
 
 A:
 1. 编辑 `templates/` 目录下的 HTML 文件
-2. 使用 Tailwind CSS 类进行样式设置
-3. JavaScript 代码直接写在 `{% block scripts %}` 中
+2. 使用 Jinja2 模板语法
+3. 使用 Tailwind CSS 类进行样式设置
+4. JavaScript 代码写在 `<script>` 标签中
+
+### Q: 如何添加新的业务逻辑？
+
+A:
+1. 在 `services/` 目录创建或编辑服务文件
+2. 定义服务类和方法
+3. 在路由中调用服务
+
+示例：
+```python
+# services/new_service.py
+class NewService:
+    def __init__(self, db_session):
+        self.db = db_session
+    
+    def do_something(self):
+        # 业务逻辑
+        pass
+
+# routes/new_routes.py
+from ..services.new_service import NewService
+from ..models import db_session
+
+@bp.route('/action')
+def action():
+    service = NewService(db_session)
+    result = service.do_something()
+    return jsonify(result)
+```
+
+### Q: 如何调试 Playwright 浏览器自动化？
+
+A:
+1. 设置环境变量 `PWDEBUG=1` 启用调试模式
+2. 使用 `page.pause()` 暂停执行
+3. 使用 `headless=False` 查看浏览器界面
+
+```python
+# 调试模式
+import os
+os.environ['PWDEBUG'] = '1'
+
+# 非无头模式
+browser = await playwright.chromium.launch(headless=False)
+```
+
+### Q: 如何处理依赖冲突？
+
+A:
+1. 使用 uv 管理依赖（推荐）：`uv sync`
+2. 或使用虚拟环境隔离：`python -m venv venv`
+3. 检查 `pyproject.toml` 中的版本约束
+4. 运行 `scripts/diagnose.py` 检查环境
 
 ## 性能优化建议
 
-1. **数据库查询优化**：使用索引、避免 N+1 查询
-2. **缓存**：对频繁访问的数据使用缓存
-3. **异步任务**：耗时操作使用后台任务队列
-4. **静态资源**：使用 CDN 加载静态资源
+1. **数据库查询优化**
+   - 使用索引加速查询
+   - 使用 `joinedload` 预加载关联数据，避免 N+1 查询
+   - 对大量数据使用分页查询
+
+2. **缓存策略**
+   - 对频繁访问且不常变化的数据使用缓存
+   - 可以考虑使用 Flask-Caching
+   - 浏览器 Session 缓存复用
+
+3. **异步任务**
+   - 耗时操作（如文章下载）使用后台任务
+   - 可以考虑集成 Celery 或 RQ
+
+4. **前端优化**
+   - 静态资源使用 CDN
+   - 使用 Tailwind CSS 的生产构建
+   - 启用 gzip 压缩
+
+5. **Playwright 优化**
+   - 复用浏览器上下文和页面
+   - 使用 Session 持久化减少登录次数
+   - 适当设置超时时间
 
 ## 安全建议
 
-1. **输入验证**：所有用户输入都要验证
-2. **SQL 注入防护**：使用 ORM 参数化查询
-3. **XSS 防护**：模板自动转义
-4. **CSRF 防护**：使用 Flask-WTF
-5. **密钥管理**：不要在代码中硬编码密钥
+1. **输入验证**
+   - 所有用户输入都要验证，使用 `validators.py` 工具
+   - 验证 URL 格式和来源
+
+2. **SQL 注入防护**
+   - 使用 ORM 参数化查询
+   - 避免拼接 SQL 字符串
+
+3. **XSS 防护**
+   - Jinja2 模板自动转义
+   - 下载的文章内容做适当清理
+
+4. **CSRF 防护**
+   - 考虑使用 Flask-WTF 添加 CSRF 保护
+   - API 接口使用 Token 认证
+
+5. **密钥管理**
+   - 不要在代码中硬编码密钥
+   - 使用 `.env` 文件管理配置
+   - `.env` 文件不要提交到版本控制
+
+6. **文件操作安全**
+   - 验证文件路径，防止路径遍历
+   - 限制文件上传大小和类型
+   - 下载文件路径使用白名单
+
+## 工具脚本
+
+### setup-uv 脚本
+
+自动安装 uv 和项目依赖：
+
+```bash
+# Windows
+.\scripts\setup-uv.ps1
+
+# Linux/macOS
+./scripts/setup-uv.sh
+```
+
+### diagnose 脚本
+
+诊断开发环境：
+
+```bash
+python scripts/diagnose.py
+```
+
+检查内容：
+- Python 版本
+- 依赖安装情况
+- 环境变量配置
+- 数据库连接
+- Playwright 浏览器
 
 ## 参考资源
 
-- [Flask 文档](https://flask.palletsprojects.com/)
-- [SQLAlchemy 文档](https://docs.sqlalchemy.org/)
-- [Playwright 文档](https://playwright.dev/python/)
-- [Tailwind CSS 文档](https://tailwindcss.com/)
+### 框架和库文档
+- [Flask 文档](https://flask.palletsprojects.com/) - Web 框架
+- [SQLAlchemy 文档](https://docs.sqlalchemy.org/) - ORM
+- [Playwright 文档](https://playwright.dev/python/) - 浏览器自动化
+- [Tailwind CSS 文档](https://tailwindcss.com/) - CSS 框架
+
+### Python 工具
+- [Ruff 文档](https://docs.astral.sh/ruff/) - 代码检查和格式化
+- [mypy 文档](https://mypy.readthedocs.io/) - 类型检查
+- [pytest 文档](https://docs.pytest.org/) - 测试框架
+- [uv 文档](https://docs.astral.sh/uv/) - Python 包管理器
+
+### 相关资源
+- [微信公众平台](https://mp.weixin.qq.com/) - 官方平台
+- [Python 类型提示](https://docs.python.org/3/library/typing.html) - 官方文档
+- [PEP 8](https://peps.python.org/pep-0008/) - Python 代码风格指南
+
+## 开发工作流
+
+### 典型开发流程
+
+1. **创建功能分支**
+```bash
+git checkout -b feature/your-feature
+```
+
+2. **开发和测试**
+```bash
+# 编写代码
+# 运行格式化
+ruff format .
+
+# 运行检查
+ruff check --fix .
+
+# 类型检查
+mypy src
+
+# 运行测试
+pytest
+```
+
+3. **提交代码**
+```bash
+git add .
+git commit -m "feat: 添加某功能"
+```
+
+4. **推送和 PR**
+```bash
+git push origin feature/your-feature
+# 在 GitHub 创建 Pull Request
+```
+
+### 版本发布流程
+
+1. 更新版本号（`pyproject.toml`）
+2. 更新 CHANGELOG
+3. 运行完整测试套件
+4. 创建 release 分支
+5. 合并到 main 分支
+6. 创建 Git tag
+
+### 使用 pre-commit（可选）
+
+安装 pre-commit hooks：
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+配置 `.pre-commit-config.yaml`：
+
+```yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-beautifulsoup4]
+```
+
+## 命令行工具使用
+
+### wechat-cli.py
+
+批量下载文章的命令行工具：
+
+```bash
+# 下载单篇文章
+python wechat-cli.py download "https://mp.weixin.qq.com/s/..."
+
+# 从文件批量下载
+python wechat-cli.py download --file urls.txt
+
+# 指定输出目录
+python wechat-cli.py download --file urls.txt --output ./downloads
+
+# 显示详细日志
+python wechat-cli.py download --file urls.txt --verbose
+```
+
+URL 文件格式（每行一个 URL）：
+```
+https://mp.weixin.qq.com/s/article1
+https://mp.weixin.qq.com/s/article2
+https://mp.weixin.qq.com/s/article3
+```

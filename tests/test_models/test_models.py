@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from wechat_article_assistant.models import WechatAccount, WechatArticle
+
 
 def test_wechat_account_model():
     """测试公众号模型"""
@@ -14,17 +16,18 @@ def test_wechat_account_model():
         memo="测试备注",
         begin=0,
         count=5,
-        collect_status="未采集"
+        collect_status="未采集",
     )
-    
+
     assert account.nickname == "测试公众号"
     assert account.fakeid == "test_fakeid"
-    
+
     # 测试 to_dict
     data = account.to_dict()
     assert data["nickname"] == "测试公众号"
     assert data["fakeid"] == "test_fakeid"
     assert data["collect_status"] == "未采集"
+
 
 def test_wechat_article_model():
     """测试文章模型"""
@@ -39,12 +42,12 @@ def test_wechat_article_model():
         article_is_deleted="否",
         article_create_time=now,
         article_update_time=now,
-        is_downloaded="否"
+        is_downloaded="否",
     )
-    
+
     assert article.article_title == "测试文章"
     assert article.article_id == "test_article_id"
-    
+
     # 测试 to_dict
     data = article.to_dict()
     assert data["article_title"] == "测试文章"
