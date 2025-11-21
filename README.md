@@ -24,40 +24,110 @@
 
 ## 🚀 快速开始
 
-### 1. 克隆项目
+### 方式一：使用 uv（推荐⚡）
+
+[uv](https://github.com/astral-sh/uv) 是一个极快的 Python 包管理器，比 pip 快 10-100 倍。
+
+#### 1. 安装 uv
+
+**Windows（PowerShell）**：
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**Linux/macOS**：
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+#### 2. 克隆项目并初始化
+
+```bash
+git clone <repository-url>
+cd wechat-article-assistant
+
+# 创建虚拟环境并安装依赖（一条命令完成）
+uv sync
+
+# 激活虚拟环境
+# Windows
+.venv\Scripts\activate
+# Linux/macOS
+source .venv/bin/activate
+```
+
+#### 3. 安装Playwright浏览器
+
+```bash
+playwright install chromium
+```
+
+#### 4. 配置环境变量
+
+```bash
+# Windows
+copy .env.example .env
+# Linux/macOS
+cp .env.example .env
+```
+
+#### 5. 启动应用
+
+```bash
+# 使用 uv 运行（推荐）
+uv run python run.py
+
+# 或在激活虚拟环境后运行
+python run.py
+```
+
+访问 http://localhost:5000
+
+---
+
+### 方式二：使用传统 pip
+
+#### 1. 克隆项目
 
 ```bash
 git clone <repository-url>
 cd wechat-article-assistant
 ```
 
-### 2. 安装依赖
+#### 2. 创建虚拟环境
 
-使用 pip:
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# Linux/macOS
+python -m venv venv
+source venv/bin/activate
+```
+
+#### 3. 安装依赖
+
 ```bash
 pip install -r requirements.txt
 ```
 
-或使用 uv (推荐):
-```bash
-uv pip install -r requirements.txt
-```
-
-### 3. 安装Playwright浏览器
+#### 4. 安装Playwright浏览器
 
 ```bash
 playwright install chromium
 ```
 
-### 4. 配置环境变量
-
-复制 `.env.example` 为 `.env` 并修改配置：
+#### 5. 配置环境变量
 
 ```bash
+# Windows
+copy .env.example .env
+# Linux/macOS
 cp .env.example .env
 ```
 
-### 5. 启动应用
+#### 6. 启动应用
 
 ```bash
 python run.py
@@ -197,26 +267,86 @@ wechat-article-assistant/
 
 ## 🔧 开发
 
-### 安装开发依赖
+### 方式一：使用 uv（推荐）
+
+#### 安装开发依赖
+
+```bash
+# 同步所有依赖（包括开发依赖）
+uv sync --all-extras
+
+# 或者单独安装开发依赖
+uv pip install -e ".[dev]"
+```
+
+#### 添加新依赖
+
+```bash
+# 添加生产依赖
+uv add <package-name>
+
+# 添加开发依赖
+uv add --dev <package-name>
+
+# 移除依赖
+uv remove <package-name>
+```
+
+#### 运行命令
+
+```bash
+# 使用 uv run 在虚拟环境中运行命令
+uv run python run.py
+uv run pytest
+uv run ruff check .
+uv run mypy src
+```
+
+#### 代码格式化和检查
+
+```bash
+uv run ruff format .
+uv run ruff check . --fix
+```
+
+#### 类型检查
+
+```bash
+uv run mypy src
+uv run pyright
+```
+
+#### 运行测试
+
+```bash
+uv run pytest
+uv run pytest --cov
+```
+
+---
+
+### 方式二：使用传统 pip
+
+#### 安装开发依赖
 
 ```bash
 pip install -e ".[dev]"
 ```
 
-### 代码格式化和检查
+#### 代码格式化和检查
 
 ```bash
 ruff format .
 ruff check .
 ```
 
-### 类型检查
+#### 类型检查
 
 ```bash
 mypy src
 ```
 
-### 运行测试
+#### 运行测试
 
 ```bash
 pytest

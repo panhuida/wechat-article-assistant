@@ -52,8 +52,23 @@ dev = [
 wechat-article-assistant = "wechat_article_assistant.cli:main"
 
 [build-system]
-requires = ["setuptools>=68.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+    "pyright>=1.1.0",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio",
+    "pytest-mock",
+    "types-requests>=2.31.0",
+    "types-beautifulsoup4",
+    "types-Pillow",
+    "pre-commit",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
