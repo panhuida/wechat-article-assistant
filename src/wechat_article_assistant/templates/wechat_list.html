@@ -157,6 +157,13 @@ async function loadAccounts() {
     }
 }
 
+// 转换图片URL为代理URL
+function toProxyUrl(url) {
+    if (!url) return url;
+    // 将微信图片URL转换为代理URL
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
 // 渲染公众号列表
 function renderAccounts(accounts) {
     const tbody = document.getElementById('accountTableBody');
@@ -169,9 +176,11 @@ function renderAccounts(accounts) {
 
     accounts.forEach(account => {
         const row = document.createElement('tr');
+        const avatarUrl = toProxyUrl(account.round_head_img);
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap">
-                ${account.round_head_img ? `<img src="${account.round_head_img}" class="w-10 h-10 rounded-full">` : '<div class="w-10 h-10 bg-gray-300 rounded-full"></div>'}
+                ${account.round_head_img ? `<img src="${avatarUrl}" class="w-10 h-10 rounded-full" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                <div class="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full" style="display:none;"></div>` : '<div class="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full"></div>'}
             </td>
             <td class="px-6 py-4">${account.nickname || '-'}</td>
             <td class="px-6 py-4">${account.alias || '-'}</td>
@@ -336,9 +345,11 @@ function renderSearchResults(accounts) {
         const div = document.createElement('div');
         div.className = 'border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer';
         div.onclick = () => selectSearchResult(account);
+        const avatarUrl = toProxyUrl(account.round_head_img);
         div.innerHTML = `
             <div class="flex items-center">
-                ${account.round_head_img ? `<img src="${account.round_head_img}" class="w-12 h-12 rounded-full mr-3">` : '<div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full mr-3"></div>'}
+                ${account.round_head_img ? `<img src="${avatarUrl}" class="w-12 h-12 rounded-full mr-3" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                <div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full mr-3" style="display:none;"></div>` : '<div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full mr-3"></div>'}
                 <div class="flex-1">
                     <h5 class="font-medium">${account.nickname}</h5>
                     <p class="text-sm text-gray-500 dark:text-gray-400">${account.signature || '暂无签名'}</p>

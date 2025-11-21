@@ -1,6 +1,6 @@
 """Flask应用入口"""
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request, Response
 
 from .config import config
 from .models import init_db
@@ -49,6 +49,38 @@ def create_app() -> Flask:
     def article_list():
         """文章列表页"""
         return render_template("article_list.html")
+
+    # 图片代理路由
+    @app.route("/api/image-proxy")
+    def image_proxy():
+        """图片代理，解决微信图片防盗链问题"""
+        import requests
+        
+        image_url = request.args.get("url")
+        if not image_url:
+            return Response("Missing URL parameter", status=400)
+        
+        try:
+            # 添加微信公众平台的 Referer
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": "https://mp.weixin.qq.com/"
+            }
+            
+            response = requests.get(image_url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                return Response(
+                    response.content,
+                    mimetype=response.headers.get("Content-Type", "image/jpeg"),
+                    headers={"Cache-Control": "public, max-age=86400"}  # 缓存1天
+                )
+            else:
+                return Response("Image not found", status=404)
+                
+        except Exception as e:
+            logger.error(f"图片代理失败: {e}")
+            return Response("Image proxy error", status=500)
 
     logger.info("Flask应用创建完成")
     return app
