@@ -7,10 +7,11 @@ from datetime import datetime
 from typing import Any
 
 import requests
+from flask import jsonify
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from ..browser.session_manager import SessionManager
+from ..browser.wechat_authenticator import WechatAuthenticator
 from ..config import config
 from ..models import WechatAccount, WechatArticle, get_db
 from ..utils.logger import get_module_logger
@@ -23,7 +24,7 @@ class ArticleService:
 
     def __init__(self):
         """初始化文章服务"""
-        self.session_manager = SessionManager()
+        self.wechat_auth = WechatAuthenticator()
 
     def get_articles(
         self,
@@ -176,10 +177,14 @@ class ArticleService:
             (是否成功, 消息, 采集数量)
         """
         try:
-            # 获取会话数据（只加载一次）
-            session_data = self.session_manager.load_session()
+            # 确保已认证（自动处理会话复用和登录）
+            if not self.wechat_auth.ensure_authenticated():
+                return jsonify({"success": False, "message": "认证失败，请重试"})            
+            
+            # 加载会话
+            session_data = self.wechat_auth.get_session_data()
             if not session_data:
-                return False, "请先登录微信公众平台", 0
+                return jsonify({"success": False, "message": "获取会话数据失败"})                        
 
             # 调用内部方法执行采集
             return self._collect_single_page_with_session(account_id, session_data)
@@ -289,9 +294,15 @@ class ArticleService:
         try:
             # 只加载一次会话，在整个采集过程中复用
             logger.info(f"开始全部采集，公众号ID: {account_id}")
-            session_data = self.session_manager.load_session()
+
+            # 确保已认证（自动处理会话复用和登录）
+            if not self.wechat_auth.ensure_authenticated():
+                return jsonify({"success": False, "message": "认证失败，请重试"})            
+            
+            # 加载会话
+            session_data = self.wechat_auth.get_session_data()
             if not session_data:
-                return False, "请先登录微信公众平台", 0
+                return jsonify({"success": False, "message": "获取会话数据失败"})                        
 
             logger.info("会话加载成功，开始循环采集")
 
@@ -388,6 +399,111 @@ class ArticleService:
             db.rollback()
 
         return count
+
+    def collect_recent_articles_all_accounts(self) -> tuple[bool, str, dict[str, Any]]:
+        """
+        获取所有公众号最近5次发的文章
+
+        Returns:
+            (是否成功, 消息, 统计信息)
+        """
+        try:
+            logger.info("开始获取所有公众号最近5次发的文章")
+
+            # 确保已认证（自动处理会话复用和登录）
+            if not self.wechat_auth.ensure_authenticated():
+                return jsonify({"success": False, "message": "认证失败，请重试"})            
+            
+            # 加载会话
+            session_data = self.wechat_auth.get_session_data()
+            if not session_data:
+                return jsonify({"success": False, "message": "获取会话数据失败"})
+            
+            # 获取所有公众号
+            with get_db() as db:
+                accounts = db.query(WechatAccount).all()
+                
+                if not accounts:
+                    return False, "没有找到公众号，请先添加公众号", {}
+                
+                total_accounts = len(accounts)
+                success_accounts = 0
+                failed_accounts = 0
+                total_articles = 0
+                failed_list = []
+                
+                logger.info(f"共找到 {total_accounts} 个公众号")
+                
+                # 循环采集每个公众号
+                for index, account in enumerate(accounts, 1):
+                    logger.info(f"[{index}/{total_accounts}] 开始采集: {account.nickname}")
+                    
+                    # 保存原始的begin和count
+                    original_begin = account.begin
+                    original_count = account.count
+                    
+                    try:
+                        # 临时设置begin=0, count=5
+                        account.begin = 0  # type: ignore[assignment]
+                        account.count = 5  # type: ignore[assignment]
+                        db.commit()
+                        
+                        # 调用单页采集
+                        success, msg, count = self._collect_single_page_with_session(
+                            account.id, session_data
+                        )
+                        
+                        if success:
+                            success_accounts += 1
+                            total_articles += count
+                            logger.info(f"[{index}/{total_accounts}] 采集成功: {account.nickname}, 文章数: {count}")
+                        else:
+                            failed_accounts += 1
+                            failed_list.append(f"{account.nickname}: {msg}")
+                            logger.error(f"[{index}/{total_accounts}] 采集失败: {account.nickname}, 原因: {msg}")
+                    
+                    except Exception as e:
+                        failed_accounts += 1
+                        failed_list.append(f"{account.nickname}: {str(e)}")
+                        logger.error(f"[{index}/{total_accounts}] 采集异常: {account.nickname}, 错误: {e}")
+                    
+                    finally:
+                        # 恢复原始的begin和count
+                        account.begin = original_begin  # type: ignore[assignment]
+                        account.count = original_count  # type: ignore[assignment]
+                        db.commit()
+                    
+                    # 添加延时避免频率限制
+                    if index < total_accounts:
+                        delay = random.uniform(1, 2)
+                        logger.info(f"延时 {delay:.2f} 秒后继续...")
+                        time.sleep(delay)
+                
+                # 生成统计信息
+                stats = {
+                    "total_accounts": total_accounts,
+                    "success_accounts": success_accounts,
+                    "failed_accounts": failed_accounts,
+                    "total_articles": total_articles,
+                    "failed_list": failed_list
+                }
+                
+                if failed_accounts == 0:
+                    message = f"全部采集完成！成功 {success_accounts} 个公众号，共 {total_articles} 篇文章"
+                    logger.info(message)
+                    return True, message, stats
+                elif success_accounts == 0:
+                    message = f"采集失败！所有公众号均采集失败"
+                    logger.error(message)
+                    return False, message, stats
+                else:
+                    message = f"采集完成！成功 {success_accounts} 个，失败 {failed_accounts} 个，共 {total_articles} 篇文章"
+                    logger.info(message)
+                    return True, message, stats
+        
+        except Exception as e:
+            logger.error(f"获取最近文章失败: {e}")
+            return False, f"采集失败: {str(e)}", {}
 
     def get_account_names(self) -> list[str]:
         """

@@ -74,6 +74,13 @@ def collect_all(account_id: int):
     return jsonify({"success": success, "message": message, "count": count})
 
 
+@article_bp.route("/collect/recent", methods=["POST"])
+def collect_recent():
+    """获取所有公众号最近5次发的文章"""
+    success, message, stats = article_service.collect_recent_articles_all_accounts()
+    return jsonify({"success": success, "message": message, "stats": stats})
+
+
 @article_bp.route("/download", methods=["POST"])
 def download_articles():
     """批量下载文章"""

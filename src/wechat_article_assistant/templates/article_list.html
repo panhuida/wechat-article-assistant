@@ -7,7 +7,10 @@
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-2xl font-bold">文章列表</h2>
     <div class="flex items-center space-x-4">
-                            <button onclick="downloadSelected()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+        <button onclick="collectRecentArticles()" class="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600">
+            获取最近5次发的文章
+        </button>
+        <button onclick="downloadSelected()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
             下载选中
         </button>
         <button onclick="deleteSelected()" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
@@ -388,6 +391,34 @@ async function loadAccountNames() {
         }
     } catch (error) {
         console.error('加载公众号名称失败:', error);
+    }
+}
+
+// 获取最近5次发的文章
+async function collectRecentArticles() {
+    try {
+        showNotification('开始采集所有公众号最近5次发的文章，请稍候...', 'info');
+        
+        const result = await apiRequest('/api/article/collect/recent', {
+            method: 'POST'
+        });
+        
+        if (result.success) {
+            const stats = result.stats || {};
+            let message = result.message;
+            
+            // 如果有失败的公众号，显示详细信息
+            if (stats.failed_list && stats.failed_list.length > 0) {
+                message += '\n\n失败的公众号：\n' + stats.failed_list.join('\n');
+            }
+            
+            showNotification(message, stats.failed_accounts > 0 ? 'warning' : 'success');
+            loadArticles();
+        } else {
+            showNotification(result.message || '采集失败', 'error');
+        }
+    } catch (error) {
+        showNotification('采集失败', 'error');
     }
 }
 
