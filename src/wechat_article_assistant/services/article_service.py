@@ -524,3 +524,62 @@ class ArticleService:
         except Exception as e:
             logger.error(f"获取公众号名称失败: {e}")
             return []
+
+    def get_all_article_ids(
+        self,
+        search: str | None = None,
+        nickname: str | None = None,
+        is_deleted: str | None = None,
+        is_downloaded: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[int]:
+        """
+        获取所有符合筛选条件的文章ID
+
+        Args:
+            search: 搜索关键词
+            nickname: 公众号名称
+            is_deleted: 是否删除
+            is_downloaded: 是否下载
+            start_date: 开始日期
+            end_date: 结束日期
+
+        Returns:
+            文章ID列表
+        """
+        try:
+            with get_db() as db:
+                query = db.query(WechatArticle.id)
+
+                # 搜索条件
+                if search:
+                    query = query.filter(
+                        or_(
+                            WechatArticle.article_title.like(f"%{search}%"),
+                            WechatArticle.article_author_name.like(f"%{search}%"),
+                        )
+                    )
+
+                # 筛选条件
+                if nickname:
+                    query = query.filter(WechatArticle.nickname == nickname)
+
+                if is_deleted:
+                    query = query.filter(WechatArticle.article_is_deleted == is_deleted)
+
+                if is_downloaded:
+                    query = query.filter(WechatArticle.is_downloaded == is_downloaded)
+
+                if start_date:
+                    query = query.filter(WechatArticle.article_create_time >= start_date)
+
+                if end_date:
+                    query = query.filter(WechatArticle.article_create_time <= end_date)
+
+                ids = [item[0] for item in query.all()]
+                return ids
+
+        except Exception as e:
+            logger.error(f"获取所有文章ID失败: {e}")
+            return []

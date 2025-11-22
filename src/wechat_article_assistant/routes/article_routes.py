@@ -127,3 +127,24 @@ def get_account_names():
     """获取所有公众号名称（用于筛选）"""
     names = article_service.get_account_names()
     return jsonify({"success": True, "data": names})
+
+
+@article_bp.route("/all-ids", methods=["GET"])
+def get_all_article_ids():
+    """获取所有符合筛选条件的文章ID"""
+    search = request.args.get("search", "")
+    nickname = request.args.get("nickname", "")
+    is_deleted = request.args.get("isDeleted", "")
+    is_downloaded = request.args.get("isDownloaded", "")
+    start_date = request.args.get("startDate", "")
+    end_date = request.args.get("endDate", "")
+
+    ids = article_service.get_all_article_ids(
+        search=search if search else None,
+        nickname=nickname if nickname else None,
+        is_deleted=is_deleted if is_deleted else None,
+        is_downloaded=is_downloaded if is_downloaded else None,
+        start_date=start_date if start_date else None,
+        end_date=end_date if end_date else None,
+    )
+    return jsonify({"success": True, "ids": ids})
