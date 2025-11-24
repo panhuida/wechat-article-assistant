@@ -1,12 +1,32 @@
-# 微信公众号文章阅读助手
+<h1 align="center"><img src="./src/wechat_article_assistant/static/favicon.png" alt="icon" width="48" height="48" style="vertical-align: middle;"/> 微信公众号文章阅读助手</h1>
 
-一个功能完善的Web应用，用于管理、采集和下载微信公众号历史文章。
+<p align="center">
+  <strong>一个可以对文档、图片的内容进行搜索的工具</strong>
+</p>
+首页
+<p align="center">
+  <img src="docs\UI\首页.png" alt="首页">
+</p>
+公众号管理
 
-📖 **快速链接**：
-- [命令行工具 - 3分钟快速入门](docs/CLI_QUICKSTART.md)（⭐ 推荐新手）
-- [命令行工具 - 完整使用指南](docs/CLI_GUIDE.md)
-- [命令行工具 - 使用演示](docs/CLI_DEMO.md)
-- [Windows全局配置指南](docs/WINDOWS_SETUP.md)
+
+<p align="center">
+  <img src="docs\UI\公众号管理.png" alt="公众号管理">
+</p>
+公众号文章
+
+
+<p align="center">
+  <img src="docs\UI\公众号文章.png" alt="公众号文章">
+</p>
+
+
+
+**注：这个项目的代码由 AI 生成，README 文档也主要由 AI 生成。**
+
+
+
+
 
 ## ✨ 功能特点
 
@@ -17,10 +37,14 @@
 - 💻 **命令行工具**：提供CLI工具快速下载指定文章
 - 🎨 **友好界面**：基于Tailwind CSS的现代化UI设计
 
+
+
 ## 📋 系统要求
 
 - Python 3.12 或更高版本
 - 支持的操作系统：Windows、macOS、Linux
+
+
 
 ## 🚀 快速开始
 
@@ -36,6 +60,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ```
 
 **Linux/macOS**：
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
@@ -135,40 +160,9 @@ python run.py
 
 访问 http://localhost:5000
 
+
+
 ## 📖 使用说明
-
-### Web界面使用
-
-#### 1. 添加公众号
-
-- 访问"公众号管理"页面
-- 点击"新增公众号"按钮
-- 选择"手工录入"或"自动获取"方式添加公众号
-
-**手工录入**：
-- 填写公众号名称（必填）
-- 填写其他信息（可选）
-- 点击"保存"
-
-**自动获取**：
-- 首次使用需要扫码登录微信公众平台
-- 输入公众号名称关键词
-- 点击"搜索"
-- 从搜索结果中选择目标公众号
-- 确认后保存
-
-#### 2. 采集文章
-
-- 在公众号列表中找到目标公众号
-- 点击"单页采集"：采集一页文章（根据配置的数量）
-- 点击"全部采集"：循环采集所有历史文章
-
-#### 3. 管理和下载文章
-
-- 访问"文章列表"页面
-- 使用搜索框或筛选条件查找文章
-- 勾选要下载的文章
-- 点击"下载选中"按钮批量下载
 
 ### 命令行工具使用
 
@@ -177,6 +171,7 @@ python run.py
 #### 方式一：使用简化脚本（推荐）
 
 **Windows用户**：
+
 ```bash
 # 下载单个文章
 wechat-cli download <article_url>
@@ -206,26 +201,6 @@ python wechat-cli.py download <article_url> --output /path/to/output
 python wechat-cli.py download <article_url> --verbose
 ```
 
-#### 方式二：使用Python模块
-
-```bash
-python -m wechat_article_assistant download <article_url>
-python -m wechat_article_assistant download --file urls.txt
-python -m wechat_article_assistant download <article_url> --output /path/to/output
-python -m wechat_article_assistant download <article_url> --verbose
-```
-
-#### 方式三：安装为系统命令
-
-```bash
-# 安装包（开发模式）
-pip install -e .
-
-# 之后可以直接使用命令
-wechat-article-assistant download <article_url>
-wechat-article-assistant download --file urls.txt
-```
-
 #### 批量下载文件格式
 
 创建一个文本文件（如 `urls.txt`），每行一个文章链接：
@@ -235,6 +210,8 @@ https://mp.weixin.qq.com/s/xxx
 https://mp.weixin.qq.com/s/yyy
 https://mp.weixin.qq.com/s/zzz
 ```
+
+
 
 ## 🗂️ 项目结构
 
@@ -262,6 +239,8 @@ wechat-article-assistant/
 ├── run.py                           # 启动脚本
 └── README.md                        # 项目说明
 ```
+
+
 
 
 
@@ -325,6 +304,8 @@ uv run pytest --cov
 
 ---
 
+
+
 ### 方式二：使用传统 pip
 
 #### 安装开发依赖
@@ -361,17 +342,25 @@ pytest
 3. **文章下载**：下载的HTML文件中的图片链接已替换为本地相对路径
 4. **数据备份**：建议定期备份 `data/` 目录下的数据库和下载文件
 
+
+
 ## 🤝 贡献
 
 欢迎提交Issue和Pull Request！
+
+
 
 ## 📄 许可证
 
 本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
 
+
+
 ## 📧 联系方式
 
 如有问题或建议，请提交Issue或联系项目维护者。
+
+
 
 ## 🙏 致谢
 
