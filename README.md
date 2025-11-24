@@ -1,8 +1,9 @@
-<h1 align="center"><img src="./src/wechat_article_assistant/static/favicon.png" alt="icon" width="48" height="48" style="vertical-align: middle;"/> 微信公众号文章阅读助手</h1>
+<h1 align="center"><img src="./src/wechat_article_assistant/static/favicon.png" alt="icon" width="48" height="48"/> 微信公众号文章阅读助手</h1>
 
 <p align="center">
-  <strong>一个可以对文档、图片的内容进行搜索的工具</strong>
+  <strong>一个可以自动获取公众号所有文章并可以下载所有文章的工具</strong>
 </p>
+
 首页
 <p align="center">
   <img src="docs\UI\首页.png" alt="首页">
