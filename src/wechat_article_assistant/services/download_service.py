@@ -1,6 +1,7 @@
 """文章下载服务"""
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -80,6 +81,73 @@ class DownloadService:
         except Exception as e:
             logger.warning(f"下载图片失败: {img_url}, 错误: {e}")
             return None
+
+    def _inject_publish_info(self, soup: BeautifulSoup, html_content: str) -> None:
+        """
+        从JavaScript中提取发布时间和地点信息，并注入到HTML元素中
+
+        Args:
+            soup: BeautifulSoup对象
+            html_content: 原始HTML内容
+        """
+        try:
+            # 提取发布时间 (create_time)
+            create_time_match = re.search(r'create_time.*?JsDecode\([\'"]([^\'"]+)', html_content)
+            if create_time_match:
+                create_time = create_time_match.group(1)
+                # 查找发布时间元素
+                publish_time_elem = soup.find("em", id="publish_time")
+                if isinstance(publish_time_elem, Tag):
+                    publish_time_elem.string = create_time
+                    logger.info(f"成功注入发布时间: {create_time}")
+                else:
+                    logger.warning("未找到 publish_time 元素")
+            else:
+                logger.warning("未能从JavaScript中提取发布时间")
+
+            # 提取IP归属地 (ip_wording)
+            # 尝试两种格式：
+            # 1. 旧格式：ip_wording: JsDecode('北京')
+            # 2. 新格式：ip_wording: { province_name: JsDecode('北京'), ... }
+            ip_wording = None
+            
+            # 先尝试新格式（对象格式）
+            province_match = re.search(r'province_name:\s*JsDecode\([\'"]([^\'"]+)', html_content)
+            if province_match:
+                ip_wording = province_match.group(1)
+                logger.debug(f"从province_name提取到IP归属地: {ip_wording}")
+            else:
+                # 尝试旧格式（直接字符串）
+                ip_wording_match = re.search(r'ip_wording:\s*JsDecode\([\'"]([^\'"]+)', html_content)
+                if ip_wording_match:
+                    ip_wording = ip_wording_match.group(1)
+                    logger.debug(f"从ip_wording提取到IP归属地: {ip_wording}")
+            
+            if ip_wording:
+                # 查找IP归属地元素
+                ip_wording_elem = soup.find("span", id="js_ip_wording")
+                if isinstance(ip_wording_elem, Tag):
+                    ip_wording_elem.string = ip_wording
+                    # 显示父容器元素
+                    ip_wording_wrp = soup.find("em", id="js_ip_wording_wrp")
+                    if isinstance(ip_wording_wrp, Tag):
+                        # 移除 display: none 样式
+                        if ip_wording_wrp.has_attr("style"):
+                            style = ip_wording_wrp["style"]
+                            if isinstance(style, str):
+                                new_style = re.sub(r'display\s*:\s*none\s*;?', '', style).strip()
+                                if new_style:
+                                    ip_wording_wrp["style"] = new_style
+                                else:
+                                    del ip_wording_wrp["style"]
+                    logger.info(f"成功注入IP归属地: {ip_wording}")
+                else:
+                    logger.warning("未找到 js_ip_wording 元素")
+            else:
+                logger.info("未找到IP归属地信息（某些文章可能没有此信息）")
+
+        except Exception as e:
+            logger.warning(f"注入发布信息时出错: {e}")
 
     def download_article(
         self,
@@ -232,6 +300,9 @@ class DownloadService:
 
                         if new_srcset:
                             img["srcset"] = ", ".join(new_srcset)
+
+            # === 提取并注入发布时间和地点信息 ===
+            self._inject_publish_info(soup, response.text)
 
             # === 移除所有外部脚本，保留内联脚本 ===
             for script in soup.find_all("script"):
