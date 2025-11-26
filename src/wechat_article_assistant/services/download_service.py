@@ -149,6 +149,129 @@ class DownloadService:
         except Exception as e:
             logger.warning(f"注入发布信息时出错: {e}")
 
+    def _clean_wechat_ui_elements(self, soup: BeautifulSoup) -> None:
+        """
+        清理微信特定的UI元素，保留文章核心内容
+
+        Args:
+            soup: BeautifulSoup对象
+        """
+        try:
+            # 1. 移除底部的互动工具栏（点赞、分享、评论等）
+            selectors_to_remove = [
+                # 底部工具栏和互动区
+                {"id": "js_bottom_ad_area"},
+                {"class_": "rich_media_tool"},
+                {"id": "js_pc_qr_code"},
+                {"class_": "qr_code_pc"},
+                {"class_": "rich_media_extra"},
+                # 分享、点赞相关
+                {"id": "js_share_bar"},
+                {"id": "like"},
+                {"class_": "reward_area"},
+                {"id": "js_preview_reward_panel"},
+                # 阅读原文、相关文章推荐
+                {"id": "js_related_container"},
+                {"id": "js_toobar3"},
+                {"class_": "rich_media_area_extra"},
+                # 页面遮罩和弹窗
+                {"class_": "wx_tap_card"},
+                {"class_": "profile_container"},
+                {"class_": "wx_follow_area"},
+                {"class_": "weui-desktop-popover"},  # 二维码弹窗
+                {"class_": "weui-dialog"},  # 对话框
+                {"class_": "jump_wx_qrcode_desc"},  # 扫码提示
+                # 小程序卡片
+                {"class_": "weapp_card"},
+                {"class_": "miniprogram_card"},
+                # 其他UI提示和按钮
+                {"id": "js_tags"},
+                {"class_": "rich_media_meta_nickname"},  # 可点击的公众号名称
+                {"class_": "wx_stream_article_slide_tip"},  # 滑动提示
+                {"class_": "stream_bottom"},  # 底部滑动区域
+                {"id": "wx_expand_article_button"},  # 阅读原文按钮
+            ]
+
+            for selector in selectors_to_remove:
+                elements = soup.find_all(**selector)
+                for elem in elements:
+                    if isinstance(elem, Tag):
+                        elem.decompose()
+
+            # 2. 清理所有 javascript: 链接
+            for link in soup.find_all("a", href=True):
+                if isinstance(link, Tag):
+                    href = link.get("href", "")
+                    if isinstance(href, str) and "javascript:" in href.lower():
+                        # 将链接转换为span，保留文本
+                        text_content = link.get_text()
+                        new_span = soup.new_tag("span")
+                        new_span.string = text_content
+                        # 复制class等属性
+                        if link.has_attr("class"):
+                            new_span["class"] = link["class"]
+                        link.replace_with(new_span)
+
+            # 3. 移除包含特定UI提示的元素
+            # 使用更精确的查找方式
+            ui_patterns = [
+                ("继续滑动看下一个", "div"),
+                ("轻触阅读原文", "div"),
+                ("向上滑动看下一个", "div"),
+                ("知道了", "div"),
+                ("微信扫一扫", "p"),
+                ("关注该公众号", "p"),
+                ("使用小程序", "p"),
+                ("在小说阅读器中沉浸阅读", "p"),
+            ]
+
+            for pattern, tag_name in ui_patterns:
+                elements = soup.find_all(tag_name, string=lambda s: s and pattern in str(s))
+                for elem in elements:
+                    if isinstance(elem, Tag):
+                        # 检查父元素是否也应该被移除
+                        parent = elem.parent
+                        if isinstance(parent, Tag):
+                            # 如果父元素内容很少，移除父元素
+                            parent_text = parent.get_text(strip=True)
+                            if len(parent_text) < 50 and pattern in parent_text:
+                                parent.decompose()
+                            else:
+                                elem.decompose()
+
+            # 4. 移除底部的多个空白或无用section/div
+            # 保留主要内容区域
+            main_content = soup.find("div", id="js_content")
+            if main_content and isinstance(main_content, Tag):
+                # 找到内容区域的父容器
+                content_parent = main_content.parent
+                if isinstance(content_parent, Tag):
+                    # 移除内容区域之后的所有兄弟元素（通常是底部UI）
+                    for sibling in list(main_content.find_next_siblings()):
+                        if isinstance(sibling, Tag):
+                            sibling.decompose()
+
+            # 5. 清理空的div和section
+            for elem in soup.find_all(["div", "section"]):
+                if isinstance(elem, Tag):
+                    # 跳过重要的内容容器
+                    if elem.get("id") in ["js_content", "page-content"]:
+                        continue
+                    if elem.get("class") and "rich_media_content" in elem.get("class", []):
+                        continue
+                    
+                    # 如果元素为空或只包含空白
+                    text = elem.get_text(strip=True)
+                    if not text:
+                        # 检查是否包含图片
+                        if not elem.find("img"):
+                            elem.decompose()
+
+            logger.info("成功清理微信UI元素")
+
+        except Exception as e:
+            logger.warning(f"清理微信UI元素时出错: {e}")
+
     def download_article(
         self,
         article_url: str,
@@ -304,9 +427,13 @@ class DownloadService:
             # === 提取并注入发布时间和地点信息 ===
             self._inject_publish_info(soup, response.text)
 
-            # === 移除所有外部脚本，保留内联脚本 ===
+            # === 清理微信UI元素 ===
+            self._clean_wechat_ui_elements(soup)
+
+            # === 移除所有脚本（包括外部和内联） ===
+            # 移除所有script标签，因为静态HTML不需要JavaScript
             for script in soup.find_all("script"):
-                if isinstance(script, Tag) and script.has_attr("src"):
+                if isinstance(script, Tag):
                     script.decompose()
 
             # 保存修改后的HTML
