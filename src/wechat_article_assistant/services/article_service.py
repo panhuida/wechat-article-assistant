@@ -373,12 +373,22 @@ class ArticleService:
                     if exists:
                         continue
 
+                    # 获取标题和 item_show_type
+                    title = appmsg.get("title", 0)
+                    item_show_type = appmsg.get("item_show_type", "")
+                    
+                    # 当 item_show_type 为 10 时，只取标题前 50 个字符
+                    if item_show_type == 10:
+                        if len(title) > 50:
+                            title = title[:50] + "..."
+                            logger.info(f"item_show_type=10，截断标题: {title}")
+
                     # 创建文章记录
                     article = WechatArticle(
                         wechat_list_id=account.id,
                         nickname=account.nickname,
                         article_id=aid,
-                        article_title=appmsg.get("title", ""),
+                        article_title=title,
                         article_cover=appmsg.get("cover", ""),
                         article_link=appmsg.get("link", ""),
                         article_author_name=appmsg.get("author_name", ""),
