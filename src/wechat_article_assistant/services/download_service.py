@@ -7,7 +7,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, Tag, Comment
 
 from ..config import config
 from ..utils.file_helper import (
@@ -234,6 +234,16 @@ class DownloadService:
                 {"class_": "wx_stream_article_slide_tip"},  # 滑动提示
                 {"class_": "stream_bottom"},  # 底部滑动区域
                 {"id": "wx_expand_article_button"},  # 阅读原文按钮
+                # 音频/视频播放器
+                {"class_": "audio_area"},
+                {"class_": "video_area"},
+                {"id": "js_audio_frame"},
+                # 评论区和互动按钮（新增）
+                {"id": "js_cmt_container"},  # 评论容器
+                {"class_": "discuss_container"},  # 讨论区
+                {"class_": "audio_msg_area"},  # 音频消息
+                {"id": "js_profile_qrcode"},  # 二维码
+                {"class_": "account_info"},  # 账号信息
             ]
 
             for selector in selectors_to_remove:
@@ -267,6 +277,14 @@ class DownloadService:
                 ("关注该公众号", "p"),
                 ("使用小程序", "p"),
                 ("在小说阅读器中沉浸阅读", "p"),
+                ("赞", "span"),  # 新增：点赞按钮
+                ("在看", "span"),  # 新增：在看按钮
+                ("分享", "span"),  # 新增：分享按钮
+                ("留言", "span"),  # 新增：留言按钮
+                ("收藏", "span"),  # 新增：收藏按钮
+                ("听过", "span"),  # 新增：听过按钮
+                ("视频", "span"),  # 新增：视频标签
+                ("小程序", "span"),  # 新增：小程序标签
             ]
 
             for pattern, tag_name in ui_patterns:
@@ -319,6 +337,54 @@ class DownloadService:
             # 批量删除
             for elem in elements_to_remove:
                 elem.decompose()
+            
+            # 6. 移除只包含标点符号、特殊字符的span和其他元素（增强）
+            # 这些通常是UI装饰元素
+            for elem in soup.find_all(["span", "em", "div", "section"]):
+                if isinstance(elem, Tag):
+                    text = elem.get_text(strip=True)
+                    # 如果元素只包含标点符号或特殊符号
+                    if text and len(text) <= 3:
+                        # 检查是否全是标点符号
+                        is_all_punctuation = all(c in '×：，。、；！？…　 \t\n\r' for c in text)
+                        if is_all_punctuation:
+                            # 检查是否在段落中间（如果有相邻文本节点，可能是有用的标点）
+                            parent = elem.parent
+                            if isinstance(parent, Tag):
+                                # 如果父元素是body或html，或者元素独立存在，则删除
+                                if parent.name in ['body', 'html', 'div', 'section']:
+                                    elem.decompose()
+                                # 或者元素前后都没有实质内容
+                                elif not (elem.previous_sibling and isinstance(elem.previous_sibling, str) and elem.previous_sibling.strip()):
+                                    if not (elem.next_sibling and isinstance(elem.next_sibling, str) and elem.next_sibling.strip()):
+                                        elem.decompose()
+            
+            # 7. 简化清理策略：只移除UI元素，完全保留原文容器结构
+            # 不修改任何容器的样式，确保与原文完全一致
+            body = soup.find("body")
+            
+            if body and isinstance(body, Tag):
+                # 移除body中错误放置的link标签（应该在head中）
+                for link in body.find_all("link"):
+                    if isinstance(link, Tag):
+                        link.decompose()
+                
+                # 移除HTML注释
+                for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
+                    comment.extract()
+                
+                # 移除明确知道是空的装饰性div（通过class识别）
+                empty_decorative_classes = [
+                    'rich_media_extra',
+                    'rich_media_tool', 
+                    'js_toobar3',
+                ]
+                for class_name in empty_decorative_classes:
+                    for elem in soup.find_all(class_=class_name):
+                        if isinstance(elem, Tag):
+                            elem.decompose()
+                
+                logger.info("已清理UI元素，完全保留原文容器结构和样式")
 
             logger.info("成功清理微信UI元素")
 
@@ -419,8 +485,8 @@ class DownloadService:
         
         Args:
             soup: BeautifulSoup对象
-            article_title: 文章标题（即内容）
-            html_content: HTML源代码（用于提取发布信息）
+            article_title: 文章标题（清理后，用于文件名）
+            html_content: HTML源代码（用于提取原始内容和发布信息）
             article_url: 文章原始URL
         """
         logger.info("处理纯文字文章，将标题内容注入到页面")
@@ -438,6 +504,15 @@ class DownloadService:
         if province_match:
             ip_location_str = province_match.group(1)
             logger.debug(f"提取到IP归属地: {ip_location_str}")
+        
+        # 从og:title提取原始内容（保留换行符）
+        original_content = article_title
+        og_title_meta = soup.find("meta", property="og:title")
+        if og_title_meta and isinstance(og_title_meta, Tag):
+            og_title = og_title_meta.get("content", "")
+            if og_title:
+                original_content = og_title
+                logger.debug(f"从og:title提取原始内容")
         
         # 查找或创建 js_content 容器
         content_div = soup.find("div", id="js_content")
@@ -485,10 +560,11 @@ class DownloadService:
             content_div.append(info_div)
             logger.info(f"已添加发布信息和原文链接")
         
-        # 将标题内容格式化后插入
-        processed_title = article_title.replace('\\n', '\n')
-        processed_title = processed_title.replace('\r\n', '\n').replace('\r', '\n')
-        paragraphs = processed_title.split('\n\n')
+        # 将内容格式化后插入
+        # 处理字面的 \n（从HTML提取的）和真实的换行符
+        processed_content = original_content.replace('\\n', '\n')
+        processed_content = processed_content.replace('\r\n', '\n').replace('\r', '\n')
+        paragraphs = processed_content.split('\n\n')
         
         for para in paragraphs:
             para = para.strip()
@@ -506,7 +582,7 @@ class DownloadService:
                 
                 content_div.append(p_tag)
         
-        logger.info(f"已将标题内容注入到 js_content，共 {len(paragraphs)} 个段落")
+        logger.info(f"已将内容注入到 js_content，共 {len(paragraphs)} 个段落")
 
     def _process_image_only_article(
         self, 
@@ -777,10 +853,17 @@ class DownloadService:
                     extracted_title = h1_tag.get_text().strip()
                     logger.info(f"从 <h1> 标签提取标题: {extracted_title[:50]}...")
 
-            # 如果成功提取到标题，使用提取的标题替换传入的标题
+            # 如果成功提取到标题，清理换行符后使用
             if extracted_title:
-                article_title = extracted_title
-                logger.info(f"使用提取的标题: {article_title[:50]}...")
+                # 清理标题中的换行符，避免文件名出现 _n_n
+                # 处理两种情况：
+                # 1. 真实的换行符 \n \r
+                # 2. 字面的 \\n \\r（HTML转义后）
+                article_title = re.sub(r'[\r\n]+', '', extracted_title)  # 真实换行符
+                article_title = re.sub(r'\\[rn]+', '', article_title)    # 字面的 \n \r
+                article_title = article_title.strip()
+                # 记录清理后的标题
+                logger.info(f"清理换行符后的标题: {article_title[:50]}")
             else:
                 logger.warning(f"未能从页面提取标题，使用传入的标题: {article_title}")
 

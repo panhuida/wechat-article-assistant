@@ -15,8 +15,9 @@ def sanitize_filename(filename: str, max_length: int = 100) -> str:
     Returns:
         清理后的文件名
     """
-    # 移除换行符和多余空白
-    filename = re.sub(r'[\r\n]+', ' ', filename)
+    # 移除换行符（直接删除，不替换为空格，避免标题过长）
+    filename = re.sub(r'[\r\n]+', '', filename)
+    # 移除多余空白
     filename = re.sub(r'\s+', ' ', filename).strip()
     
     # 替换Windows文件名非法字符
