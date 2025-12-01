@@ -82,13 +82,14 @@ class DownloadService:
             logger.warning(f"下载图片失败: {img_url}, 错误: {e}")
             return None
 
-    def _inject_publish_info(self, soup: BeautifulSoup, html_content: str) -> None:
+    def _inject_publish_info(self, soup: BeautifulSoup, html_content: str, article_url: str) -> None:
         """
         从JavaScript中提取发布时间和地点信息，并注入到HTML元素中
 
         Args:
             soup: BeautifulSoup对象
             html_content: 原始HTML内容
+            article_url: 文章原始URL
         """
         try:
             # 提取发布时间
@@ -167,6 +168,27 @@ class DownloadService:
                     logger.warning("未找到 js_ip_wording 元素")
             else:
                 logger.info("未找到IP归属地信息（某些文章可能没有此信息）")
+
+            # 添加原文链接
+            # 查找元信息容器
+            meta_content_elem = soup.find("span", id="meta_content_hide_info")
+            if isinstance(meta_content_elem, Tag):
+                # 创建原文链接元素
+                source_link_em = soup.new_tag("em", **{"class": "rich_media_meta rich_media_meta_text"})
+                source_link_em["style"] = "margin-left: 10px;"
+                
+                # 创建链接
+                source_link_a = soup.new_tag("a")
+                source_link_a["href"] = article_url
+                source_link_a["target"] = "_blank"
+                source_link_a["style"] = "color: #576b95; text-decoration: none;"
+                source_link_a.string = article_url
+                
+                source_link_em.append(source_link_a)
+                meta_content_elem.append(source_link_em)
+                logger.info(f"成功注入原文链接: {article_url}")
+            else:
+                logger.warning("未找到 meta_content_hide_info 元素")
 
         except Exception as e:
             logger.warning(f"注入发布信息时出错: {e}")
@@ -388,7 +410,8 @@ class DownloadService:
         self, 
         soup: BeautifulSoup, 
         article_title: str, 
-        html_content: str
+        html_content: str,
+        article_url: str
     ) -> None:
         """
         处理纯文字文章（item_show_type=10）
@@ -398,6 +421,7 @@ class DownloadService:
             soup: BeautifulSoup对象
             article_title: 文章标题（即内容）
             html_content: HTML源代码（用于提取发布信息）
+            article_url: 文章原始URL
         """
         logger.info("处理纯文字文章，将标题内容注入到页面")
         
@@ -431,8 +455,8 @@ class DownloadService:
         # 清空原有内容
         content_div.clear()
         
-        # 添加发布信息
-        if publish_time_str or ip_location_str:
+        # 添加发布信息和原文链接
+        if publish_time_str or ip_location_str or article_url:
             info_div = soup.new_tag("div")
             info_div["style"] = "color: #888; font-size: 14px; margin-bottom: 2em; padding-bottom: 1em; border-bottom: 1px solid #eee;"
             
@@ -442,10 +466,24 @@ class DownloadService:
             if ip_location_str:
                 info_parts.append(ip_location_str)
             
-            info_text = "  ".join(info_parts)
-            info_div.string = info_text
+            # 添加文本部分
+            if info_parts:
+                info_text = "  ".join(info_parts)
+                info_div.append(info_text)
+            
+            # 添加原文链接
+            if article_url:
+                if info_parts:
+                    info_div.append("  ")
+                link_a = soup.new_tag("a")
+                link_a["href"] = article_url
+                link_a["target"] = "_blank"
+                link_a["style"] = "color: #576b95; text-decoration: none;"
+                link_a.string = article_url
+                info_div.append(link_a)
+            
             content_div.append(info_div)
-            logger.info(f"已添加发布信息: {info_text}")
+            logger.info(f"已添加发布信息和原文链接")
         
         # 将标题内容格式化后插入
         processed_title = article_title.replace('\\n', '\n')
@@ -474,7 +512,8 @@ class DownloadService:
         self, 
         soup: BeautifulSoup, 
         article_title: str, 
-        html_content: str
+        html_content: str,
+        article_url: str
     ) -> None:
         """
         处理纯图片文章（item_show_type=8）
@@ -484,6 +523,7 @@ class DownloadService:
             soup: BeautifulSoup对象
             article_title: 文章标题
             html_content: HTML源代码
+            article_url: 文章原始URL
         """
         logger.info("处理纯图片文章，创建完整内容容器")
         
@@ -541,8 +581,8 @@ class DownloadService:
             title_h1.string = image_title
             content_div.append(title_h1)
             
-            # 2. 添加发布信息
-            if publish_time_str or ip_location_str:
+            # 2. 添加发布信息和原文链接
+            if publish_time_str or ip_location_str or article_url:
                 info_div = soup.new_tag("div")
                 info_div["style"] = "color: #888; font-size: 14px; margin-bottom: 20px;"
                 
@@ -552,8 +592,22 @@ class DownloadService:
                 if ip_location_str:
                     info_parts.append(ip_location_str)
                 
-                info_text = "  ".join(info_parts)
-                info_div.string = info_text
+                # 添加文本部分
+                if info_parts:
+                    info_text = "  ".join(info_parts)
+                    info_div.append(info_text)
+                
+                # 添加原文链接
+                if article_url:
+                    if info_parts:
+                        info_div.append("  ")
+                    link_a = soup.new_tag("a")
+                    link_a["href"] = article_url
+                    link_a["target"] = "_blank"
+                    link_a["style"] = "color: #576b95; text-decoration: none;"
+                    link_a.string = article_url
+                    info_div.append(link_a)
+                
                 content_div.append(info_div)
             
             # 3. 添加描述（如果有）
@@ -763,9 +817,9 @@ class DownloadService:
 
             # === 根据文章类型进行不同处理 ===
             if is_text_only_article:
-                self._process_text_only_article(soup, article_title, response.text)
+                self._process_text_only_article(soup, article_title, response.text, article_url)
             elif is_image_only_article:
-                self._process_image_only_article(soup, article_title, response.text)
+                self._process_image_only_article(soup, article_title, response.text, article_url)
             else:
                 self._process_normal_article(soup)
 
@@ -845,7 +899,7 @@ class DownloadService:
                             img["srcset"] = ", ".join(new_srcset)
 
             # === 提取并注入发布时间和地点信息 ===
-            self._inject_publish_info(soup, response.text)
+            self._inject_publish_info(soup, response.text, article_url)
 
             # === 清理微信UI元素 ===
             self._clean_wechat_ui_elements(soup)
