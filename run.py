@@ -7,7 +7,7 @@ from pathlib import Path
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
-from wechat_article_assistant.app import app
+from wechat_article_assistant import create_app
 from wechat_article_assistant.config import config
 
 if __name__ == "__main__":
@@ -19,4 +19,8 @@ if __name__ == "__main__":
     print("=" * 60)
     print()
 
+    # 创建应用实例
+    app = create_app()
+    
+    # 启动应用
     app.run(host="0.0.0.0", port=5000, debug=config.DEBUG, use_reloader=False)
