@@ -6,6 +6,8 @@ from pathlib import Path
 
 from .services.download_service import DownloadService
 
+__all__ = ["main"]
+
 
 def main():
     """命令行工具主函数"""

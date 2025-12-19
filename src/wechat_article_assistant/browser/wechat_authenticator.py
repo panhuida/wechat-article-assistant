@@ -11,6 +11,8 @@ from ..utils.logger import get_module_logger
 from .browser_manager import BrowserManager
 from .session_manager import SessionManager
 
+__all__ = ["WechatAuthenticator"]
+
 logger = get_module_logger(__name__)
 
 

@@ -16,6 +16,8 @@ from ..utils.file_helper import (
 )
 from ..utils.logger import get_module_logger
 
+__all__ = ["DownloadService"]
+
 logger = get_module_logger(__name__)
 
 

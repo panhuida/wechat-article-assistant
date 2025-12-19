@@ -10,6 +10,8 @@ from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 
 from .config import config
 
+__all__ = ["Base", "WechatAccount", "WechatArticle", "get_db", "init_db", "engine", "SessionLocal"]
+
 
 # 创建基类
 class Base(DeclarativeBase):

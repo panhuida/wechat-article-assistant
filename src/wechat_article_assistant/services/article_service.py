@@ -15,6 +15,8 @@ from ..config import config
 from ..models import WechatAccount, WechatArticle, get_db
 from ..utils.logger import get_module_logger
 
+__all__ = ["ArticleService"]
+
 logger = get_module_logger(__name__)
 
 

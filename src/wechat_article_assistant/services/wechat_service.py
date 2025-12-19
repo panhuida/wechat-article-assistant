@@ -6,6 +6,8 @@ from ..models import WechatAccount, get_db
 from ..utils.logger import get_module_logger
 from ..utils.validators import validate_required
 
+__all__ = ["WechatService"]
+
 logger = get_module_logger(__name__)
 
 

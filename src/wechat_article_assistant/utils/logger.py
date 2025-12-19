@@ -6,6 +6,16 @@ from logging.handlers import RotatingFileHandler
 
 from ..config import config
 
+__all__ = [
+    "RelativePathFormatter",
+    "get_module_logger",
+    "setup_werkzeug_logger",
+    "setup_logger",
+    "app_logger",
+    "collect_logger",
+    "download_logger",
+]
+
 
 class RelativePathFormatter(logging.Formatter):
     """自定义格式化器，移除模块路径前缀"""
@@ -17,12 +27,45 @@ class RelativePathFormatter(logging.Formatter):
         return super().format(record)
 
 
-def get_module_logger(module_name: str) -> logging.Logger:
+# 共享的文件处理器（避免重复创建）
+_file_handler: RotatingFileHandler | None = None
+
+
+def _get_shared_file_handler() -> RotatingFileHandler:
+    """
+    获取共享的文件处理器（单例）
+
+    所有模块日志都写入同一个 app.log 文件
+
+    Returns:
+        文件处理器
+    """
+    global _file_handler
+    if _file_handler is None:
+        config.LOG_DIR.mkdir(parents=True, exist_ok=True)
+        file_path = config.LOG_DIR / "app.log"
+        _file_handler = RotatingFileHandler(
+            file_path,
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5,
+            encoding="utf-8",
+        )
+        log_level = getattr(logging, config.LOG_LEVEL)
+        _file_handler.setLevel(log_level)
+        formatter = RelativePathFormatter(
+            "%(asctime)s %(levelname)-8s %(name)s:%(lineno)d %(message)s"
+        )
+        _file_handler.setFormatter(formatter)
+    return _file_handler
+
+
+def get_module_logger(module_name: str, write_to_file: bool = True) -> logging.Logger:
     """
     获取模块专用的logger
 
     Args:
         module_name: 模块名称（通常使用 __name__）
+        write_to_file: 是否同时写入日志文件（默认 True）
 
     Returns:
         配置好的logger
@@ -41,13 +84,20 @@ def get_module_logger(module_name: str) -> logging.Logger:
     logger.propagate = False
 
     # 日志格式
-    formatter = RelativePathFormatter("%(asctime)s %(levelname)-8s %(name)s:%(lineno)d %(message)s")
+    formatter = RelativePathFormatter(
+        "%(asctime)s %(levelname)-8s %(name)s:%(lineno)d %(message)s"
+    )
 
     # 控制台处理器
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
+
+    # 文件处理器（共享）
+    if write_to_file:
+        file_handler = _get_shared_file_handler()
+        logger.addHandler(file_handler)
 
     return logger
 

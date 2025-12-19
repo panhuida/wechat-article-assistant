@@ -10,6 +10,7 @@ from .routes.wechat_routes import wechat_bp
 from .utils.logger import get_module_logger, setup_werkzeug_logger
 
 __version__ = "0.1.0"
+__all__ = ["create_app", "__version__"]
 
 logger = get_module_logger(__name__)
 

@@ -6,6 +6,8 @@ from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from ..utils.logger import get_module_logger
 
+__all__ = ["BrowserManager"]
+
 logger = get_module_logger(__name__)
 
 

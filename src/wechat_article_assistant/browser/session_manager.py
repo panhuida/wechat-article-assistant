@@ -8,6 +8,8 @@ from typing import Any, cast
 from ..config import config
 from ..utils.logger import get_module_logger
 
+__all__ = ["SessionManager"]
+
 logger = get_module_logger(__name__)
 
 

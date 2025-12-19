@@ -6,6 +6,8 @@ from io import BytesIO
 import qrcode
 from qrcode.constants import ERROR_CORRECT_L
 
+__all__ = ["generate_qr_code"]
+
 
 def generate_qr_code(data: str, size: int = 300) -> str:
     """
