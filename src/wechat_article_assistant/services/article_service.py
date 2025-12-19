@@ -376,7 +376,7 @@ class ArticleService:
                     # 获取标题和 item_show_type
                     title = appmsg.get("title", 0)
                     item_show_type = appmsg.get("item_show_type", "")
-                    
+
                     # 当 item_show_type 为 10 时，只取标题前 50 个字符
                     if item_show_type == 10:
                         if len(title) > 50:

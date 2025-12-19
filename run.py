@@ -21,6 +21,6 @@ if __name__ == "__main__":
 
     # 创建应用实例
     app = create_app()
-    
+
     # 启动应用
     app.run(host="0.0.0.0", port=5000, debug=config.DEBUG, use_reloader=False)

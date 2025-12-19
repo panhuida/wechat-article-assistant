@@ -33,7 +33,7 @@ def setup_test_env():
 @pytest.fixture
 def app(setup_test_env):
     """创建测试Flask应用"""
-    from wechat_article_assistant.app import create_app
+    from wechat_article_assistant import create_app
 
     app = create_app()
     app.config["TESTING"] = True

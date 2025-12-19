@@ -7,7 +7,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup, Tag, Comment
+from bs4 import BeautifulSoup, Comment, Tag
 
 from ..config import config
 from ..utils.file_helper import (
@@ -82,7 +82,9 @@ class DownloadService:
             logger.warning(f"下载图片失败: {img_url}, 错误: {e}")
             return None
 
-    def _inject_publish_info(self, soup: BeautifulSoup, html_content: str, article_url: str) -> None:
+    def _inject_publish_info(
+        self, soup: BeautifulSoup, html_content: str, article_url: str
+    ) -> None:
         """
         从JavaScript中提取发布时间和地点信息，并注入到HTML元素中
 
@@ -98,25 +100,31 @@ class DownloadService:
             # 2. create_time: JsDecode('...')
             # 3. create_time = "..."
             create_time = None
-            
+
             # 格式1：var createTime = '...'
-            create_time_match = re.search(r"var\s+createTime\s*=\s*['\"]([^'\"]+)['\"]", html_content)
+            create_time_match = re.search(
+                r"var\s+createTime\s*=\s*['\"]([^'\"]+)['\"]", html_content
+            )
             if create_time_match:
                 create_time = create_time_match.group(1)
                 logger.debug(f"从 var createTime 提取到发布时间: {create_time}")
             else:
                 # 格式2：create_time: JsDecode('...')
-                create_time_match = re.search(r'create_time.*?JsDecode\([\'"]([^\'"]+)', html_content)
+                create_time_match = re.search(
+                    r'create_time.*?JsDecode\([\'"]([^\'"]+)', html_content
+                )
                 if create_time_match:
                     create_time = create_time_match.group(1)
                     logger.debug(f"从 create_time JsDecode 提取到发布时间: {create_time}")
                 else:
                     # 格式3：create_time = "..." 或 create_time: "..."
-                    create_time_match = re.search(r'create_time\s*[:=]\s*["\']([^"\']+)', html_content)
+                    create_time_match = re.search(
+                        r'create_time\s*[:=]\s*["\']([^"\']+)', html_content
+                    )
                     if create_time_match:
                         create_time = create_time_match.group(1)
                         logger.debug(f"从 create_time 提取到发布时间: {create_time}")
-            
+
             if create_time:
                 # 查找发布时间元素
                 publish_time_elem = soup.find("em", id="publish_time")
@@ -133,7 +141,7 @@ class DownloadService:
             # 1. 旧格式：ip_wording: JsDecode('北京')
             # 2. 新格式：ip_wording: { province_name: JsDecode('北京'), ... }
             ip_wording = None
-            
+
             # 先尝试新格式（对象格式）
             province_match = re.search(r'province_name:\s*JsDecode\([\'"]([^\'"]+)', html_content)
             if province_match:
@@ -141,11 +149,13 @@ class DownloadService:
                 logger.debug(f"从province_name提取到IP归属地: {ip_wording}")
             else:
                 # 尝试旧格式（直接字符串）
-                ip_wording_match = re.search(r'ip_wording:\s*JsDecode\([\'"]([^\'"]+)', html_content)
+                ip_wording_match = re.search(
+                    r'ip_wording:\s*JsDecode\([\'"]([^\'"]+)', html_content
+                )
                 if ip_wording_match:
                     ip_wording = ip_wording_match.group(1)
                     logger.debug(f"从ip_wording提取到IP归属地: {ip_wording}")
-            
+
             if ip_wording:
                 # 查找IP归属地元素
                 ip_wording_elem = soup.find("span", id="js_ip_wording")
@@ -158,7 +168,7 @@ class DownloadService:
                         if ip_wording_wrp.has_attr("style"):
                             style = ip_wording_wrp["style"]
                             if isinstance(style, str):
-                                new_style = re.sub(r'display\s*:\s*none\s*;?', '', style).strip()
+                                new_style = re.sub(r"display\s*:\s*none\s*;?", "", style).strip()
                                 if new_style:
                                     ip_wording_wrp["style"] = new_style
                                 else:
@@ -174,16 +184,18 @@ class DownloadService:
             meta_content_elem = soup.find("span", id="meta_content_hide_info")
             if isinstance(meta_content_elem, Tag):
                 # 创建原文链接元素
-                source_link_em = soup.new_tag("em", **{"class": "rich_media_meta rich_media_meta_text"})
+                source_link_em = soup.new_tag(
+                    "em", **{"class": "rich_media_meta rich_media_meta_text"}
+                )
                 source_link_em["style"] = "margin-left: 10px;"
-                
+
                 # 创建链接
                 source_link_a = soup.new_tag("a")
                 source_link_a["href"] = article_url
                 source_link_a["target"] = "_blank"
                 source_link_a["style"] = "color: #576b95; text-decoration: none;"
                 source_link_a.string = article_url
-                
+
                 source_link_em.append(source_link_a)
                 meta_content_elem.append(source_link_em)
                 logger.info(f"成功注入原文链接: {article_url}")
@@ -322,22 +334,22 @@ class DownloadService:
                     elem_id = elem.get("id")
                     if elem_id in ["js_content", "page-content"]:
                         continue
-                    
+
                     elem_class = elem.get("class")
                     if elem_class and "rich_media_content" in elem_class:
                         continue
-                    
+
                     # 如果元素为空或只包含空白
                     text = elem.get_text(strip=True)
                     if not text:
                         # 检查是否包含图片
                         if not elem.find("img"):
                             elements_to_remove.append(elem)
-            
+
             # 批量删除
             for elem in elements_to_remove:
                 elem.decompose()
-            
+
             # 6. 移除只包含标点符号、特殊字符的span和其他元素（增强）
             # 这些通常是UI装饰元素
             for elem in soup.find_all(["span", "em", "div", "section"]):
@@ -346,50 +358,59 @@ class DownloadService:
                     # 如果元素只包含标点符号或特殊符号
                     if text and len(text) <= 3:
                         # 检查是否全是标点符号
-                        is_all_punctuation = all(c in '×：，。、；！？…　 \t\n\r' for c in text)
+                        is_all_punctuation = all(c in "×：，。、；！？…　 \t\n\r" for c in text)
                         if is_all_punctuation:
                             # 检查是否在段落中间（如果有相邻文本节点，可能是有用的标点）
                             parent = elem.parent
                             if isinstance(parent, Tag):
                                 # 如果父元素是body或html，或者元素独立存在，则删除
-                                if parent.name in ['body', 'html', 'div', 'section']:
+                                if parent.name in ["body", "html", "div", "section"]:
                                     elem.decompose()
                                 # 或者元素前后都没有实质内容
-                                elif not (elem.previous_sibling and isinstance(elem.previous_sibling, str) and elem.previous_sibling.strip()):
-                                    if not (elem.next_sibling and isinstance(elem.next_sibling, str) and elem.next_sibling.strip()):
+                                elif not (
+                                    elem.previous_sibling
+                                    and isinstance(elem.previous_sibling, str)
+                                    and elem.previous_sibling.strip()
+                                ):
+                                    if not (
+                                        elem.next_sibling
+                                        and isinstance(elem.next_sibling, str)
+                                        and elem.next_sibling.strip()
+                                    ):
                                         elem.decompose()
-            
+
             # 7. 简化清理策略：只移除UI元素，完全保留原文容器结构
             # 不修改任何容器的样式，确保与原文完全一致
             body = soup.find("body")
-            
+
             if body and isinstance(body, Tag):
                 # 移除body中错误放置的link标签（应该在head中）
                 for link in body.find_all("link"):
                     if isinstance(link, Tag):
                         link.decompose()
-                
+
                 # 移除HTML注释
                 for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
                     comment.extract()
-                
+
                 # 移除明确知道是空的装饰性div（通过class识别）
                 empty_decorative_classes = [
-                    'rich_media_extra',
-                    'rich_media_tool', 
-                    'js_toobar3',
+                    "rich_media_extra",
+                    "rich_media_tool",
+                    "js_toobar3",
                 ]
                 for class_name in empty_decorative_classes:
                     for elem in soup.find_all(class_=class_name):
                         if isinstance(elem, Tag):
                             elem.decompose()
-                
+
                 logger.info("已清理UI元素，完全保留原文容器结构和样式")
 
             logger.info("成功清理微信UI元素")
 
         except Exception as e:
             import traceback
+
             logger.warning(f"清理微信UI元素时出错: {e}")
             logger.debug(f"详细错误: {traceback.format_exc()}")
 
@@ -397,37 +418,37 @@ class DownloadService:
         """
         从JavaScript的picture_page_info_list数组中提取图片URL
         只提取第一层对象中的cdn_url，不包括嵌套对象
-        
+
         Args:
             html_content: HTML源代码
-            
+
         Returns:
             图片URL列表
         """
         picture_urls = []
-        
+
         # 查找picture_page_info_list数组
-        list_start_pattern = r'picture_page_info_list\s*:\s*\['
+        list_start_pattern = r"picture_page_info_list\s*:\s*\["
         list_start_match = re.search(list_start_pattern, html_content)
-        
+
         if not list_start_match:
             logger.debug("未找到picture_page_info_list")
             return picture_urls
-        
+
         start_pos = list_start_match.end()
-        
+
         # 查找数组结束：查找下一个顶级字段
-        end_pattern = r'\n\s{0,8}\w+\s*:'
-        temp_text = html_content[start_pos:start_pos+80000]
+        end_pattern = r"\n\s{0,8}\w+\s*:"
+        temp_text = html_content[start_pos : start_pos + 80000]
         end_match = re.search(end_pattern, temp_text)
-        
+
         if end_match:
             end_pos = start_pos + end_match.start()
         else:
             end_pos = start_pos + 50000
-        
+
         list_content = html_content[start_pos:end_pos]
-        
+
         # 逐字符解析，找到每个顶层对象
         objects = []
         depth = 0
@@ -435,54 +456,50 @@ class DownloadService:
         in_string = False
         escape_next = False
         i = 0
-        
+
         while i < len(list_content):
             char = list_content[i]
-            
+
             if escape_next:
                 escape_next = False
-            elif char == '\\':
+            elif char == "\\":
                 escape_next = True
             elif char in ('"', "'") and not escape_next:
                 in_string = not in_string
             elif not in_string:
-                if char == '{':
+                if char == "{":
                     if depth == 0:
                         current_obj_start = i
                     depth += 1
-                elif char == '}':
+                elif char == "}":
                     depth -= 1
                     if depth == 0 and current_obj_start >= 0:
-                        obj_content = list_content[current_obj_start:i+1]
+                        obj_content = list_content[current_obj_start : i + 1]
                         objects.append(obj_content)
                         current_obj_start = -1
-            
+
             i += 1
-        
+
         # 在每个对象中只提取第一个cdn_url
         for obj in objects:
             match = re.search(r"cdn_url:\s*JsDecode\(['\"]([^'\"]+)['\"]", obj)
             if match:
                 picture_urls.append(match.group(1))
-        
+
         if picture_urls:
             logger.info(f"从picture_page_info_list提取到 {len(picture_urls)} 个图片URL（仅第一层）")
         else:
             logger.warning("picture_page_info_list数组的第一层未找到cdn_url")
-        
+
         return picture_urls
 
     def _process_text_only_article(
-        self, 
-        soup: BeautifulSoup, 
-        article_title: str, 
-        html_content: str,
-        article_url: str
+        self, soup: BeautifulSoup, article_title: str, html_content: str, article_url: str
     ) -> None:
         """
         处理纯文字文章（item_show_type=10）
         这类文章没有正常的body内容，标题就是全部内容
-        
+
         Args:
             soup: BeautifulSoup对象
             article_title: 文章标题（清理后，用于文件名）
@@ -490,21 +507,21 @@ class DownloadService:
             article_url: 文章原始URL
         """
         logger.info("处理纯文字文章，将标题内容注入到页面")
-        
+
         # 提取发布信息
         publish_time_str = None
         ip_location_str = None
-        
+
         time_match = re.search(r"var\s+createTime\s*=\s*['\"]([^'\"]+)['\"]", html_content)
         if time_match:
             publish_time_str = time_match.group(1)
             logger.debug(f"提取到发布时间: {publish_time_str}")
-        
+
         province_match = re.search(r'province_name:\s*JsDecode\([\'"]([^\'"]+)', html_content)
         if province_match:
             ip_location_str = province_match.group(1)
             logger.debug(f"提取到IP归属地: {ip_location_str}")
-        
+
         # 从og:title提取原始内容（保留换行符）
         original_content = article_title
         og_title_meta = soup.find("meta", property="og:title")
@@ -512,8 +529,8 @@ class DownloadService:
             og_title = og_title_meta.get("content", "")
             if og_title:
                 original_content = og_title
-                logger.debug(f"从og:title提取原始内容")
-        
+                logger.debug("从og:title提取原始内容")
+
         # 查找或创建 js_content 容器
         content_div = soup.find("div", id="js_content")
         if not isinstance(content_div, Tag):
@@ -522,30 +539,32 @@ class DownloadService:
                 content_div = soup.new_tag("div", id="js_content")
                 body.append(content_div)
                 logger.info("创建了 js_content 容器")
-        
+
         if not isinstance(content_div, Tag):
             logger.warning("无法创建 js_content 容器")
             return
-        
+
         # 清空原有内容
         content_div.clear()
-        
+
         # 添加发布信息和原文链接
         if publish_time_str or ip_location_str or article_url:
             info_div = soup.new_tag("div")
-            info_div["style"] = "color: #888; font-size: 14px; margin-bottom: 2em; padding-bottom: 1em; border-bottom: 1px solid #eee;"
-            
+            info_div["style"] = (
+                "color: #888; font-size: 14px; margin-bottom: 2em; padding-bottom: 1em; border-bottom: 1px solid #eee;"
+            )
+
             info_parts = []
             if publish_time_str:
                 info_parts.append(publish_time_str)
             if ip_location_str:
                 info_parts.append(ip_location_str)
-            
+
             # 添加文本部分
             if info_parts:
                 info_text = "  ".join(info_parts)
                 info_div.append(info_text)
-            
+
             # 添加原文链接
             if article_url:
                 if info_parts:
@@ -556,45 +575,41 @@ class DownloadService:
                 link_a["style"] = "color: #576b95; text-decoration: none;"
                 link_a.string = article_url
                 info_div.append(link_a)
-            
+
             content_div.append(info_div)
-            logger.info(f"已添加发布信息和原文链接")
-        
+            logger.info("已添加发布信息和原文链接")
+
         # 将内容格式化后插入
         # 处理字面的 \n（从HTML提取的）和真实的换行符
-        processed_content = original_content.replace('\\n', '\n')
-        processed_content = processed_content.replace('\r\n', '\n').replace('\r', '\n')
-        paragraphs = processed_content.split('\n\n')
-        
+        processed_content = original_content.replace("\\n", "\n")
+        processed_content = processed_content.replace("\r\n", "\n").replace("\r", "\n")
+        paragraphs = processed_content.split("\n\n")
+
         for para in paragraphs:
             para = para.strip()
             if para:
-                lines = para.split('\n')
+                lines = para.split("\n")
                 p_tag = soup.new_tag("p")
                 p_tag["style"] = "margin: 1em 0; line-height: 1.8; font-size: 16px;"
-                
+
                 for i, line in enumerate(lines):
                     line = line.strip()
                     if line:
                         if i > 0:
                             p_tag.append(soup.new_tag("br"))
                         p_tag.append(line)
-                
+
                 content_div.append(p_tag)
-        
+
         logger.info(f"已将内容注入到 js_content，共 {len(paragraphs)} 个段落")
 
     def _process_image_only_article(
-        self, 
-        soup: BeautifulSoup, 
-        article_title: str, 
-        html_content: str,
-        article_url: str
+        self, soup: BeautifulSoup, article_title: str, html_content: str, article_url: str
     ) -> None:
         """
         处理纯图片文章（item_show_type=8）
         这类文章的HTML中可能没有js_content容器，需要特殊处理
-        
+
         Args:
             soup: BeautifulSoup对象
             article_title: 文章标题
@@ -602,11 +617,11 @@ class DownloadService:
             article_url: 文章原始URL
         """
         logger.info("处理纯图片文章，创建完整内容容器")
-        
+
         # 提取发布信息
         publish_time_str = None
         ip_location_str = None
-        
+
         time_match = re.search(r"create_time:\s*JsDecode\(['\"]([^'\"]+)['\"]", html_content)
         if time_match:
             publish_time_str = time_match.group(1)
@@ -616,12 +631,12 @@ class DownloadService:
             if time_match:
                 publish_time_str = time_match.group(1)
                 logger.debug(f"提取到发布时间（备用格式）: {publish_time_str}")
-        
+
         province_match = re.search(r'province_name:\s*JsDecode\([\'"]([^\'"]+)', html_content)
         if province_match:
             ip_location_str = province_match.group(1)
             logger.debug(f"提取到IP归属地: {ip_location_str}")
-        
+
         # 提取标题（从og:title）
         image_title = article_title
         og_title_meta = soup.find("meta", property="og:title")
@@ -630,16 +645,16 @@ class DownloadService:
             if og_title:
                 image_title = og_title
                 logger.debug(f"从og:title提取标题: {image_title}")
-        
+
         # 提取描述（从og:description）
         description = ""
         og_desc_meta = soup.find("meta", property="og:description")
         if og_desc_meta and isinstance(og_desc_meta, Tag):
             description = og_desc_meta.get("content", "")
-        
+
         # 提取滑动图片信息
         picture_urls = self._extract_picture_urls_from_js_array(html_content)
-        
+
         # 检查是否有js_content
         content_div = soup.find("div", id="js_content")
         if not isinstance(content_div, Tag):
@@ -647,32 +662,34 @@ class DownloadService:
             if not isinstance(body, Tag):
                 logger.warning("未找到 body 标签，无法创建内容容器")
                 return
-            
+
             content_div = soup.new_tag("div", id="js_content")
             content_div["style"] = "padding: 20px; max-width: 800px; margin: 0 auto;"
-            
+
             # 1. 添加标题
             title_h1 = soup.new_tag("h1")
-            title_h1["style"] = "font-size: 24px; font-weight: bold; margin-bottom: 10px; line-height: 1.4;"
+            title_h1["style"] = (
+                "font-size: 24px; font-weight: bold; margin-bottom: 10px; line-height: 1.4;"
+            )
             title_h1.string = image_title
             content_div.append(title_h1)
-            
+
             # 2. 添加发布信息和原文链接
             if publish_time_str or ip_location_str or article_url:
                 info_div = soup.new_tag("div")
                 info_div["style"] = "color: #888; font-size: 14px; margin-bottom: 20px;"
-                
+
                 info_parts = []
                 if publish_time_str:
                     info_parts.append(publish_time_str)
                 if ip_location_str:
                     info_parts.append(ip_location_str)
-                
+
                 # 添加文本部分
                 if info_parts:
                     info_text = "  ".join(info_parts)
                     info_div.append(info_text)
-                
+
                 # 添加原文链接
                 if article_url:
                     if info_parts:
@@ -683,101 +700,110 @@ class DownloadService:
                     link_a["style"] = "color: #576b95; text-decoration: none;"
                     link_a.string = article_url
                     info_div.append(link_a)
-                
+
                 content_div.append(info_div)
-            
+
             # 3. 添加描述（如果有）
             if description:
                 desc_div = soup.new_tag("div")
-                desc_div["style"] = "color: #000000; font-size: 15px; margin-bottom: 20px; line-height: 1.6;"
-                
-                import re as regex_module
+                desc_div["style"] = (
+                    "color: #000000; font-size: 15px; margin-bottom: 20px; line-height: 1.6;"
+                )
+
                 import html
-                
+                import re as regex_module
+
                 # 替换十六进制转义序列
                 def hex_replace(match):
                     hex_str = match.group(1)
                     return chr(int(hex_str, 16))
-                
-                decoded_desc = regex_module.sub(r'\\x([0-9a-fA-F]{2})', hex_replace, description)
+
+                decoded_desc = regex_module.sub(r"\\x([0-9a-fA-F]{2})", hex_replace, description)
                 decoded_desc = html.unescape(decoded_desc)
                 decoded_desc = html.unescape(decoded_desc)
-                decoded_desc = decoded_desc.replace('\n', '<br>')
-                
+                decoded_desc = decoded_desc.replace("\n", "<br>")
+
                 from bs4 import BeautifulSoup as BS
-                temp_soup = BS(f'<div>{decoded_desc}</div>', 'html.parser')
-                
+
+                temp_soup = BS(f"<div>{decoded_desc}</div>", "html.parser")
+
                 for child in list(temp_soup.div.children):
                     desc_div.append(child)
-                
+
                 content_div.append(desc_div)
-            
+
             # 4. 添加分隔线
             hr = soup.new_tag("hr")
             hr["style"] = "border: none; border-top: 1px solid #eee; margin: 20px 0;"
             content_div.append(hr)
-            
+
             # 5. 添加图片
             if picture_urls:
                 logger.info(f"使用picture_page_info_list中的 {len(picture_urls)} 张图片")
-                
+
                 for idx, img_url in enumerate(picture_urls):
                     img_container = soup.new_tag("div")
                     img_container["style"] = "margin: 20px 0;"
-                    
+
                     img_tag = soup.new_tag("img")
                     img_tag["src"] = img_url
-                    img_tag["style"] = "max-width: 100%; height: auto; display: block; margin-bottom: 10px; cursor: pointer;"
+                    img_tag["style"] = (
+                        "max-width: 100%; height: auto; display: block; margin-bottom: 10px; cursor: pointer;"
+                    )
                     img_tag["loading"] = "lazy"
                     img_container.append(img_tag)
-                    
+
                     link_div = soup.new_tag("div")
                     link_div["style"] = "font-size: 12px; color: #999;"
-                    
+
                     link_a = soup.new_tag("a")
                     link_a["href"] = img_url
                     link_a["target"] = "_blank"
                     link_a["style"] = "color: #576b95; text-decoration: none;"
-                    
-                    filename = img_url.split('/')[-1].split('?')[0]
+
+                    filename = img_url.split("/")[-1].split("?")[0]
                     link_a.string = f"📎 图片 {idx + 1}: {filename}"
-                    
+
                     link_div.append(link_a)
                     img_container.append(link_div)
                     content_div.append(img_container)
             else:
                 all_imgs = soup.find_all("img")
                 if all_imgs:
-                    logger.info(f"未找到picture_page_info_list，使用HTML中的 {len(all_imgs)} 张图片")
-                    
+                    logger.info(
+                        f"未找到picture_page_info_list，使用HTML中的 {len(all_imgs)} 张图片"
+                    )
+
                     for idx, img in enumerate(all_imgs):
                         img_container = soup.new_tag("div")
                         img_container["style"] = "margin: 20px 0;"
-                        
+
                         img_copy = soup.new_tag("img")
                         for attr, value in img.attrs.items():
                             img_copy[attr] = value
-                        img_copy["style"] = "max-width: 100%; height: auto; display: block; margin-bottom: 10px; cursor: pointer;"
+                        img_copy["style"] = (
+                            "max-width: 100%; height: auto; display: block; margin-bottom: 10px; cursor: pointer;"
+                        )
                         img_container.append(img_copy)
-                        
+
                         img_src = img.get("src", "")
                         if img_src:
                             link_div = soup.new_tag("div")
                             link_div["style"] = "font-size: 12px; color: #999;"
-                            
+
                             link_a = soup.new_tag("a")
                             link_a["href"] = img_src
                             link_a["target"] = "_blank"
                             link_a["style"] = "color: #576b95; text-decoration: none;"
-                            
-                            filename = img_src.split('/')[-1].split('?')[0]
+
+                            filename = img_src.split("/")[-1].split("?")[0]
                             link_a.string = f"📎 图片 {idx + 1}: {filename}"
-                            
+
                             link_div.append(link_a)
                             img_container.append(link_div)
-                        
+
                         content_div.append(img_container)
-            
+
             body.insert(0, content_div)
             logger.info("已创建 js_content 容器并添加完整内容")
 
@@ -785,7 +811,7 @@ class DownloadService:
         """
         处理普通文章
         确保文章内容可见
-        
+
         Args:
             soup: BeautifulSoup对象
         """
@@ -859,8 +885,8 @@ class DownloadService:
                 # 处理两种情况：
                 # 1. 真实的换行符 \n \r
                 # 2. 字面的 \\n \\r（HTML转义后）
-                article_title = re.sub(r'[\r\n]+', '', extracted_title)  # 真实换行符
-                article_title = re.sub(r'\\[rn]+', '', article_title)    # 字面的 \n \r
+                article_title = re.sub(r"[\r\n]+", "", extracted_title)  # 真实换行符
+                article_title = re.sub(r"\\[rn]+", "", article_title)  # 字面的 \n \r
                 article_title = article_title.strip()
                 # 记录清理后的标题
                 logger.info(f"清理换行符后的标题: {article_title[:50]}")
@@ -871,20 +897,24 @@ class DownloadService:
             # item_show_type = 10: 纯文字文章（标题即内容）
             # item_show_type = 8: 纯图片文章（内容主要是图片）
             max_filename_length = 100  # 默认长度
-            item_show_type_match = re.search(r'item_show_type["\']?\s*[:=]\s*["\']?(\d+)', response.text)
+            item_show_type_match = re.search(
+                r'item_show_type["\']?\s*[:=]\s*["\']?(\d+)', response.text
+            )
             is_text_only_article = False  # 标记是否为纯文字文章
             is_image_only_article = False  # 标记是否为纯图片文章
-            
+
             if item_show_type_match:
                 item_show_type = int(item_show_type_match.group(1))
                 logger.info(f"检测到 item_show_type: {item_show_type}")
                 if item_show_type == 10:
                     max_filename_length = 40
                     is_text_only_article = True
-                    logger.info(f"item_show_type=10，这是纯文字文章（标题即内容），使用较短文件名长度: {max_filename_length}")
+                    logger.info(
+                        f"item_show_type=10，这是纯文字文章（标题即内容），使用较短文件名长度: {max_filename_length}"
+                    )
                 elif item_show_type == 8:
                     is_image_only_article = True
-                    logger.info(f"item_show_type=8，这是纯图片文章")
+                    logger.info("item_show_type=8，这是纯图片文章")
 
             # === 确保HTML头中有正确的编码声明 ===
             head = soup.find("head")

@@ -33,8 +33,8 @@ def create_app() -> Flask:
     logger.info("数据库初始化完成")
 
     # 注册蓝图
-    app.register_blueprint(main_bp)     # 注册主路由
-    app.register_blueprint(wechat_bp)   # 注册公众号功能路由
+    app.register_blueprint(main_bp)  # 注册主路由
+    app.register_blueprint(wechat_bp)  # 注册公众号功能路由
     app.register_blueprint(article_bp)  # 注册文章功能路由
     logger.info("路由注册完成")
 
