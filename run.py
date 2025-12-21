@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("微信公众号文章阅读助手")
     print("=" * 60)
-    print("服务地址: http://127.0.0.1:5000")
+    print(f"服务地址: http://127.0.0.1:{config.PORT}")
     print(f"调试模式: {config.DEBUG}")
     print("=" * 60)
     print()
@@ -23,4 +23,4 @@ if __name__ == "__main__":
     app = create_app()
 
     # 启动应用
-    app.run(host="0.0.0.0", port=5000, debug=config.DEBUG, use_reloader=False)
+    app.run(host="0.0.0.0", port=config.PORT, debug=config.DEBUG, use_reloader=False)

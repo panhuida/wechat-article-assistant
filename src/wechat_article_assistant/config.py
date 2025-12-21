@@ -20,6 +20,7 @@ class Config:
     # Flask配置
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-please-change-in-production")
     DEBUG = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+    PORT = int(os.getenv("FLASK_PORT", 5000))
 
     # 数据库配置
     DATABASE_URL = os.getenv(
