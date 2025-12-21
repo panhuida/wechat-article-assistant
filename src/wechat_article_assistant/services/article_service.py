@@ -242,7 +242,7 @@ class ArticleService:
                 }
 
                 headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
                     "Referer": config.WECHAT_MP_URL,
                 }
 
@@ -370,7 +370,14 @@ class ArticleService:
                 for appmsg in appmsgex_list:
                     # 检查文章是否已存在
                     aid = appmsg.get("aid", "")
-                    exists = db.query(WechatArticle).filter(WechatArticle.article_id == aid).first()
+                    exists = (
+                        db.query(WechatArticle)
+                        .filter(
+                            WechatArticle.article_id == aid,
+                            WechatArticle.wechat_list_id == account.id,
+                        )
+                        .first()
+                    )
 
                     if exists:
                         continue
