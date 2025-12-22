@@ -163,7 +163,46 @@ python run.py
 
 
 
-## 📖 使用说明
+## �️ 数据库支持
+
+本项目默认使用 SQLite 数据库，同时也支持 PostgreSQL。
+
+### 配置 PostgreSQL
+
+1. 确保已安装 PostgreSQL 并创建了数据库用户。
+2. 修改 `.env` 文件中的 `DATABASE_URL` 配置：
+
+```ini
+# SQLite (默认)
+# DATABASE_URL=sqlite:///data/wechat_assistant.db
+
+# PostgreSQL
+DATABASE_URL=postgresql://username:password@localhost:5432/wechat_assistant
+```
+
+### 数据迁移 (SQLite -> PostgreSQL)
+
+如果你想从 SQLite 迁移到 PostgreSQL，可以使用内置的迁移脚本：
+
+1. 确保 `.env` 中配置了目标 PostgreSQL 数据库的连接串。
+2. 运行迁移脚本：
+
+```bash
+# Windows
+python scripts/migrate_to_pg.py
+
+# Linux/macOS
+python3 scripts/migrate_to_pg.py
+```
+
+脚本会自动：
+- 检查并创建目标数据库（如果权限允许）
+- 在 PostgreSQL 中创建表结构
+- 将 SQLite 中的数据完整迁移到 PostgreSQL
+
+
+
+## �📖 使用说明
 
 ### 命令行工具使用
 

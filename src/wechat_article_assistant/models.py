@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 
 from .config import config
@@ -57,14 +57,14 @@ class WechatAccount(Base):
     __tablename__ = "wechat_list"
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="序号")
-    fakeid = Column(String(100), nullable=True, comment="公众号唯一标识")
-    nickname = Column(String(50), nullable=True, comment="公众号名称")
-    alias = Column(String(50), nullable=True, comment="公众号别名")
-    round_head_img = Column(String(200), nullable=True, comment="公众号圆形头像URL")
-    service_type = Column(String(10), nullable=True, comment="公众号类型")
-    signature = Column(String(200), nullable=True, comment="公众号签名")
-    verify_status = Column(String(10), nullable=True, comment="公众号认证状态")
-    memo = Column(String(200), nullable=True, comment="备注")
+    fakeid = Column(String(200), nullable=True, comment="公众号唯一标识")
+    nickname = Column(String(100), nullable=True, comment="公众号名称")
+    alias = Column(String(100), nullable=True, comment="公众号别名")
+    round_head_img = Column(Text, nullable=True, comment="公众号圆形头像URL")
+    service_type = Column(String(50), nullable=True, comment="公众号类型")
+    signature = Column(Text, nullable=True, comment="公众号签名")
+    verify_status = Column(String(50), nullable=True, comment="公众号认证状态")
+    memo = Column(Text, nullable=True, comment="备注")
     begin = Column(Integer, default=0, nullable=True, comment="单页起始位置")
     count = Column(Integer, default=5, nullable=True, comment="单页采集数量")
     collect_status = Column(String(50), default="未采集", nullable=True, comment="采集状态")
@@ -109,13 +109,13 @@ class WechatArticle(Base):
     wechat_list_id = Column(
         Integer, ForeignKey("wechat_list.id"), nullable=True, comment="公众号列表ID"
     )
-    nickname = Column(String(50), nullable=True, comment="公众号名称")
-    article_id = Column(String(50), nullable=True, comment="文章ID")
-    article_title = Column(String(100), nullable=True, comment="文章标题")
-    article_cover = Column(String(200), nullable=True, comment="文章封面")
-    article_link = Column(String(200), nullable=True, comment="文章链接")
-    article_author_name = Column(String(20), nullable=True, comment="文章作者")
-    article_is_deleted = Column(String(10), default="否", nullable=True, comment="文章是否删除")
+    nickname = Column(String(100), nullable=True, comment="公众号名称")
+    article_id = Column(String(100), nullable=True, comment="文章ID")
+    article_title = Column(Text, nullable=True, comment="文章标题")
+    article_cover = Column(Text, nullable=True, comment="文章封面")
+    article_link = Column(Text, nullable=True, comment="文章链接")
+    article_author_name = Column(String(200), nullable=True, comment="文章作者")
+    article_is_deleted = Column(String(50), default="否", nullable=True, comment="文章是否删除")
     article_create_time = Column(DateTime, nullable=True, comment="文章创建时间")
     article_update_time = Column(DateTime, nullable=True, comment="文章更新时间")
     is_downloaded = Column(String(10), default="否", nullable=True, comment="是否下载")
