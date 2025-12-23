@@ -57,7 +57,7 @@ def delete_account(account_id: int):
 
 @wechat_bp.route("/search", methods=["POST"])
 def search_account():
-    """搜索公众号（自动处理登录）"""
+    """搜索公众号（根据登录模式处理认证）"""
     data = request.json
     if not data:
         return jsonify({"success": False, "message": "无效的请求数据"})
@@ -67,9 +67,34 @@ def search_account():
         return jsonify({"success": False, "message": "搜索关键词不能为空"})
 
     try:
-        # 确保已认证（自动处理会话复用和登录）
-        if not wechat_auth.ensure_authenticated():
-            return jsonify({"success": False, "message": "认证失败，请重试"})
+        # 首先检查是否有有效会话
+        if not wechat_auth.session_manager.is_session_valid():
+            # 检查登录模式
+            if config.LOGIN_MODE == "popup":
+                # 弹窗模式：返回需要登录的状态，让前端显示二维码
+                return jsonify({
+                    "success": False,
+                    "needLogin": True,
+                    "loginMode": "popup",
+                    "message": "请扫码登录"
+                })
+            else:
+                # 浏览器模式：自动启动浏览器登录
+                if not wechat_auth.ensure_authenticated():
+                    return jsonify({"success": False, "message": "认证失败，请重试"})
+        else:
+            # 有会话但可能已失效，尝试验证
+            if not wechat_auth._verify_session():
+                if config.LOGIN_MODE == "popup":
+                    return jsonify({
+                        "success": False,
+                        "needLogin": True,
+                        "loginMode": "popup",
+                        "message": "会话已失效，请重新扫码登录"
+                    })
+                else:
+                    if not wechat_auth.ensure_authenticated():
+                        return jsonify({"success": False, "message": "认证失败，请重试"})
 
         # 获取会话数据
         session_data = wechat_auth.get_session_data()
@@ -106,6 +131,13 @@ def search_account():
             # 如果是会话失效错误，清除会话并提示重试
             if "登录" in error_msg or "login" in error_msg.lower():
                 wechat_auth.session_manager.clear_session()
+                if config.LOGIN_MODE == "popup":
+                    return jsonify({
+                        "success": False,
+                        "needLogin": True,
+                        "loginMode": "popup",
+                        "message": "会话已失效，请重新扫码登录"
+                    })
                 return jsonify({"success": False, "message": "会话已失效，请重试"})
             return jsonify({"success": False, "message": error_msg})
 
@@ -117,7 +149,33 @@ def search_account():
 def check_login():
     """检查登录状态"""
     is_logged_in = wechat_auth.session_manager.is_session_valid()
-    return jsonify({"success": True, "isLoggedIn": is_logged_in})
+    login_mode = config.LOGIN_MODE
+    return jsonify({
+        "success": True,
+        "isLoggedIn": is_logged_in,
+        "loginMode": login_mode
+    })
+
+
+@wechat_bp.route("/login/qrcode", methods=["GET"])
+def get_login_qrcode():
+    """获取登录二维码（弹窗模式）"""
+    result = wechat_auth.start_qrcode_login()
+    return jsonify(result)
+
+
+@wechat_bp.route("/login/poll", methods=["GET"])
+def poll_login():
+    """轮询登录状态（弹窗模式）"""
+    result = wechat_auth.poll_login_status()
+    return jsonify(result)
+
+
+@wechat_bp.route("/login/cancel", methods=["POST"])
+def cancel_login():
+    """取消登录（弹窗模式）"""
+    wechat_auth.cancel_login()
+    return jsonify({"success": True, "message": "已取消登录"})
 
 
 @wechat_bp.route("/logout", methods=["POST"])

@@ -313,7 +313,7 @@ async function searchAccount() {
 
     try {
         // 显示加载提示
-        showNotification('正在搜索，如需登录会自动打开浏览器...', 'info');
+        showNotification('正在搜索...', 'info');
         
         const result = await apiRequest('/api/wechat/search', {
             method: 'POST',
@@ -322,6 +322,16 @@ async function searchAccount() {
 
         if (result.success) {
             renderSearchResults(result.data);
+        } else if (result.needLogin && result.loginMode === 'popup') {
+            // 需要登录，显示二维码弹窗
+            showNotification('请扫码登录后继续', 'info');
+            showQrcodeLoginModal(() => {
+                // 登录成功后重新搜索
+                searchAccount();
+            });
+        } else if (result.needLogin) {
+            // 浏览器模式，提示正在启动浏览器
+            showNotification('正在启动浏览器，请在浏览器中扫码登录...', 'info');
         } else {
             showNotification(result.message || '搜索失败', 'error');
         }

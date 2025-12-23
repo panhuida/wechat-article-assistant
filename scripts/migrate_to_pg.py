@@ -48,6 +48,44 @@ def create_database_if_not_exists(url):
         print(f"警告: 无法检查/创建数据库: {e}")
         print("将尝试直接连接到目标数据库...")
 
+
+def fix_sequences(engine):
+    """
+    修复 PostgreSQL 序列值
+    
+    从 SQLite 迁移数据后，PostgreSQL 的序列值不会自动更新，
+    需要手动将序列值设置为表中最大 ID + 1，否则插入新记录时会出现主键冲突。
+    """
+    print("\n正在修复 PostgreSQL 序列值...")
+    
+    # 需要修复的表和序列
+    tables = [
+        ("wechat_list", "wechat_list_id_seq"),
+        ("wechat_article_list", "wechat_article_list_id_seq"),
+    ]
+    
+    with engine.connect() as conn:
+        for table_name, sequence_name in tables:
+            try:
+                # 获取表中的最大 ID
+                result = conn.execute(text(f"SELECT MAX(id) FROM {table_name}"))
+                max_id = result.scalar()
+                
+                if max_id is None:
+                    print(f"  表 {table_name}: 空表，跳过")
+                    continue
+                
+                # 修复序列值为 max_id + 1
+                new_seq = max_id + 1
+                conn.execute(text(f"SELECT setval('{sequence_name}', {new_seq}, false)"))
+                conn.commit()
+                print(f"  表 {table_name}: 序列已设置为 {new_seq} (最大ID: {max_id})")
+                
+            except Exception as e:
+                print(f"  表 {table_name}: 修复失败 - {e}")
+    
+    print("序列修复完成！")
+
 def migrate():
     print("开始迁移...")
     print(f"源数据库: {SOURCE_URL}")
@@ -118,6 +156,9 @@ def migrate():
             
         target_session.commit()
         print("迁移成功完成！")
+        
+        # 修复 PostgreSQL 序列值
+        fix_sequences(target_engine)
         
     except Exception as e:
         target_session.rollback()

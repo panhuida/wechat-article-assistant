@@ -40,10 +40,14 @@
 
 
 
+
+
 ## 📋 系统要求
 
 - Python 3.12 或更高版本
 - 支持的操作系统：Windows、macOS、Linux
+
+
 
 
 
@@ -163,11 +167,44 @@ python run.py
 
 
 
-## �️ 数据库支持
+
+
+## 📖 使用说明
+### 登录模式配置
+
+本工具支持两种微信公众平台登录方式，可通过 `.env` 文件中的 `LOGIN_MODE` 参数配置：
+
+```ini
+# 登录方式配置
+# popup: 在Web应用中弹窗显示二维码（推荐，无需打开额外浏览器窗口）
+# browser: 启动Playwright浏览器窗口扫码登录
+LOGIN_MODE=popup
+```
+
+| 模式 | 值 | 说明 | 适用场景 |
+|------|-----|------|----------|
+| 弹窗模式 | `popup` | 二维码直接显示在网页弹窗中 | 推荐，体验更好 |
+| 浏览器模式 | `browser` | 打开 Playwright 浏览器窗口扫码 | 高频使用场景更安全 |
+
+**弹窗模式特点：**
+- 无需切换窗口，二维码直接在网页中显示
+- 扫码后自动检测登录状态，自动关闭弹窗
+- 使用 headless 浏览器，后台静默运行
+
+**浏览器模式特点：**
+- 打开可见的浏览器窗口显示二维码
+- 更接近真实用户行为，风控风险更低
+
+> 详细技术说明请参考 [docs/弹窗二维码登录功能说明.md](docs/弹窗二维码登录功能说明.md)
+
+
+
+
+### 数据库支持
 
 本项目默认使用 SQLite 数据库，同时也支持 PostgreSQL。
 
-### 配置 PostgreSQL
+#### 1. 配置 PostgreSQL
 
 1. 确保已安装 PostgreSQL 并创建了数据库用户。
 2. 修改 `.env` 文件中的 `DATABASE_URL` 配置：
@@ -180,7 +217,7 @@ python run.py
 DATABASE_URL=postgresql://username:password@localhost:5432/wechat_assistant
 ```
 
-### 数据迁移 (SQLite -> PostgreSQL)
+#### 2. 数据迁移 (SQLite -> PostgreSQL)
 
 如果你想从 SQLite 迁移到 PostgreSQL，可以使用内置的迁移脚本：
 
@@ -196,13 +233,14 @@ python3 scripts/migrate_to_pg.py
 ```
 
 脚本会自动：
+
 - 检查并创建目标数据库（如果权限允许）
 - 在 PostgreSQL 中创建表结构
 - 将 SQLite 中的数据完整迁移到 PostgreSQL
 
 
 
-## �📖 使用说明
+
 
 ### 命令行工具使用
 
@@ -372,6 +410,8 @@ mypy src
 ```bash
 pytest
 ```
+
+
 
 
 

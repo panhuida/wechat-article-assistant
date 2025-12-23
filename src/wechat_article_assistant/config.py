@@ -43,6 +43,11 @@ class Config:
     WECHAT_MP_URL = os.getenv("WECHAT_MP_URL", "https://mp.weixin.qq.com")
     SESSION_FILE = BASE_DIR / os.getenv("SESSION_FILE", "data/wechat_session.json")
 
+    # 登录方式配置
+    # popup: 在Web应用中弹窗显示二维码（推荐，不启动可见浏览器）
+    # browser: 启动Playwright浏览器窗口扫码登录
+    LOGIN_MODE = os.getenv("LOGIN_MODE", "popup")
+
     # 确保目录存在
     @classmethod
     def init_app(cls) -> None:
