@@ -432,6 +432,12 @@ async function collectSingle(id) {
         if (result.success) {
             showNotification(result.message, 'success');
             loadAccounts();
+        } else if (result.needLogin) {
+            // 需要登录，弹出二维码
+            showQrcodeLoginModal(() => {
+                // 登录成功后重新采集
+                collectSingle(id);
+            });
         } else {
             showNotification(result.message || '采集失败', 'error');
         }
@@ -453,6 +459,12 @@ async function collectAll(id) {
         if (result.success) {
             showNotification(result.message, 'success');
             loadAccounts();
+        } else if (result.needLogin) {
+            // 需要登录，弹出二维码
+            showQrcodeLoginModal(() => {
+                // 登录成功后重新采集
+                collectAll(id);
+            });
         } else {
             showNotification(result.message || '采集失败', 'error');
         }

@@ -2,12 +2,15 @@
 
 from flask import Blueprint, jsonify, request
 
+from ..browser.wechat_authenticator import WechatAuthenticator
+from ..config import config
 from ..services.article_service import ArticleService
 from ..services.download_service import DownloadService
 
 article_bp = Blueprint("article", __name__, url_prefix="/api/article")
 article_service = ArticleService()
 download_service = DownloadService()
+wechat_auth = WechatAuthenticator()
 
 
 @article_bp.route("/list", methods=["GET"])
@@ -62,9 +65,39 @@ def delete_articles():
     return jsonify({"success": success, "message": message})
 
 
+def _check_login_required():
+    """检查是否需要登录，返回需要登录的响应或 None"""
+    # 首先检查是否有有效会话
+    if not wechat_auth.session_manager.is_session_valid():
+        # 检查登录模式
+        if config.LOGIN_MODE == "popup":
+            # 弹窗模式：返回需要登录的状态，让前端显示二维码
+            return jsonify({
+                "success": False,
+                "needLogin": True,
+                "loginMode": "popup",
+                "message": "请扫码登录"
+            })
+    else:
+        # 有会话但可能已失效，尝试验证
+        if not wechat_auth._verify_session():
+            if config.LOGIN_MODE == "popup":
+                return jsonify({
+                    "success": False,
+                    "needLogin": True,
+                    "loginMode": "popup",
+                    "message": "会话已失效，请重新扫码登录"
+                })
+    return None
+
+
 @article_bp.route("/collect/single/<int:account_id>", methods=["POST"])
 def collect_single_page(account_id: int):
     """采集单页文章"""
+    login_response = _check_login_required()
+    if login_response:
+        return login_response
+    
     success, message, count = article_service.collect_articles_single_page(account_id)
     return jsonify({"success": success, "message": message, "count": count})
 
@@ -72,6 +105,10 @@ def collect_single_page(account_id: int):
 @article_bp.route("/collect/all/<int:account_id>", methods=["POST"])
 def collect_all(account_id: int):
     """采集全部文章"""
+    login_response = _check_login_required()
+    if login_response:
+        return login_response
+    
     success, message, count = article_service.collect_articles_all(account_id)
     return jsonify({"success": success, "message": message, "count": count})
 
@@ -79,6 +116,10 @@ def collect_all(account_id: int):
 @article_bp.route("/collect/recent", methods=["POST"])
 def collect_recent():
     """获取所有公众号最近5次发的文章"""
+    login_response = _check_login_required()
+    if login_response:
+        return login_response
+
     success, message, stats = article_service.collect_recent_articles_all_accounts()
     return jsonify({"success": success, "message": message, "stats": stats})
 
