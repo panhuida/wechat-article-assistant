@@ -6,6 +6,9 @@
   python wechat-cli.py download --file <file_path>
   python wechat-cli.py download <article_url> --output <output_dir>
   python wechat-cli.py collect-recent
+  python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06
+  python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 测试公众号
+  python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 公众号A,公众号B
 """
 
 import sys

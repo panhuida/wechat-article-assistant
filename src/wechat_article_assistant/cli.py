@@ -2,8 +2,10 @@
 
 import argparse
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
+from .config import config
 from .services.article_service import ArticleService
 from .services.download_service import DownloadService
 
@@ -29,12 +31,48 @@ def main():
     )
     collect_recent_parser.add_argument("--verbose", "-v", action="store_true", help="显示失败详情")
 
+    # 按时间范围下载已采集文章命令
+    download_articles_parser = subparsers.add_parser(
+        "download-articles", help="按文章创建时间范围批量下载文章"
+    )
+    download_articles_parser.add_argument(
+        "--start-time",
+        help="开始时间，支持 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS，默认最近一天",
+        default=None,
+    )
+    download_articles_parser.add_argument(
+        "--end-time",
+        help="结束时间，支持 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS，默认当前时间",
+        default=None,
+    )
+    download_articles_parser.add_argument(
+        "--format",
+        dest="save_format",
+        choices=["html", "markdown"],
+        default="markdown",
+        help="保存格式，默认 markdown",
+    )
+    download_articles_parser.add_argument(
+        "--nickname",
+        help="按公众号名称筛选，支持逗号分隔多个名称（精确匹配）",
+        default=None,
+    )
+    download_articles_parser.add_argument(
+        "--output",
+        "-o",
+        help="保存目录，默认使用 .env 中的 DOWNLOAD_PATH / DOWNLOAD_DIR",
+        default=None,
+    )
+    download_articles_parser.add_argument("--verbose", "-v", action="store_true", help="显示失败详情")
+
     args = parser.parse_args()
 
     if args.command == "download":
         download_command(args)
     elif args.command == "collect-recent":
         collect_recent_command(args)
+    elif args.command == "download-articles":
+        download_articles_command(args)
     else:
         parser.print_help()
 
@@ -137,6 +175,111 @@ def collect_recent_command(args: argparse.Namespace) -> None:
     print(f"{'=' * 60}\n")
 
     if not success:
+        sys.exit(1)
+
+
+def _parse_cli_datetime(value: str, is_end: bool = False) -> datetime:
+    """解析 CLI 传入的日期时间字符串"""
+    value = value.strip()
+    formats = [
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+    ]
+
+    for fmt in formats:
+        try:
+            parsed = datetime.strptime(value, fmt)
+            if fmt == "%Y-%m-%d":
+                if is_end:
+                    return parsed.replace(hour=23, minute=59, second=59)
+                return parsed.replace(hour=0, minute=0, second=0)
+            return parsed
+        except ValueError:
+            continue
+
+    # 兼容 ISO 格式（例如 2026-03-06T12:00:00）
+    try:
+        parsed = datetime.fromisoformat(value)
+        if parsed.tzinfo is not None:
+            return parsed.replace(tzinfo=None)
+        return parsed
+    except ValueError as e:
+        raise ValueError(f"无法解析时间: {value}") from e
+
+
+def download_articles_command(args: argparse.Namespace) -> None:
+    """按时间范围批量下载已采集文章"""
+    article_service = ArticleService()
+    download_service = DownloadService()
+
+    now = datetime.now()
+    default_start = now - timedelta(days=1)
+    start_time = default_start
+    end_time = now
+
+    try:
+        if args.start_time:
+            start_time = _parse_cli_datetime(args.start_time, is_end=False)
+        if args.end_time:
+            end_time = _parse_cli_datetime(args.end_time, is_end=True)
+    except ValueError as e:
+        print(f"\n错误: {e}\n")
+        print("示例:")
+        print("  wechat-cli download-articles --start-time 2026-03-05 --end-time 2026-03-06")
+        print(
+            "  wechat-cli download-articles --start-time '2026-03-05 00:00:00' --format markdown"
+        )
+        print()
+        sys.exit(1)
+
+    if start_time > end_time:
+        print("\n错误: 开始时间不能晚于结束时间\n")
+        sys.exit(1)
+
+    output_dir = Path(args.output) if args.output else None
+    nicknames = (
+        [item.strip() for item in args.nickname.split(",") if item.strip()] if args.nickname else []
+    )
+    nickname_display = ",".join(nicknames) if nicknames else "全部"
+
+    print(f"\n{'=' * 60}")
+    print("按时间范围批量下载文章")
+    print(f"时间范围: {start_time.strftime('%Y-%m-%d %H:%M:%S')} ~ {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"公众号名称: {nickname_display}")
+    print(f"保存格式: {args.save_format}")
+    print(f"保存路径: {output_dir if output_dir else config.DOWNLOAD_DIR}")
+    print(f"{'=' * 60}\n")
+
+    articles = article_service.get_articles_by_create_time_range(
+        start_time, end_time, nicknames=nicknames
+    )
+    if not articles:
+        print("未找到符合条件的文章。")
+        return
+
+    success_count, fail_count, errors = download_service.download_articles_batch(
+        articles, output_dir, output_format=args.save_format
+    )
+
+    if success_count > 0:
+        article_ids = [article["id"] for article in articles if isinstance(article.get("id"), int)]
+        if article_ids:
+            article_service.mark_as_downloaded(article_ids)
+
+    print(f"\n{'=' * 60}")
+    print(f"匹配文章: {len(articles)} 篇")
+    print(f"下载成功: {success_count} 篇")
+    print(f"下载失败: {fail_count} 篇")
+    print(f"{'=' * 60}\n")
+
+    if errors and args.verbose:
+        print("失败详情:")
+        for error in errors:
+            print(f"  ✗ {error}")
+        print()
+
+    if fail_count > 0 and success_count == 0:
         sys.exit(1)
 
 

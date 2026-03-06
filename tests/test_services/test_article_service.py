@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from wechat_article_assistant.models import WechatArticle
 from wechat_article_assistant.services.article_service import ArticleService
@@ -48,3 +48,91 @@ def test_article_service_delete(db):
 
     deleted = db.query(WechatArticle).filter_by(id=article.id).first()
     assert deleted is None
+
+
+def test_get_articles_by_create_time_range(db):
+    """测试按创建时间范围获取文章"""
+    service = ArticleService()
+    now = datetime.now()
+
+    in_range = WechatArticle(
+        nickname="公众号A",
+        article_title="范围内文章",
+        article_create_time=now - timedelta(hours=6),
+    )
+    out_of_range = WechatArticle(
+        nickname="公众号B",
+        article_title="范围外文章",
+        article_create_time=now - timedelta(days=3),
+    )
+    db.add_all([in_range, out_of_range])
+    db.commit()
+
+    articles = service.get_articles_by_create_time_range(
+        start_time=now - timedelta(days=1),
+        end_time=now,
+    )
+
+    assert len(articles) == 1
+    assert articles[0]["article_title"] == "范围内文章"
+
+
+def test_get_articles_by_create_time_range_with_nickname(db):
+    """测试按创建时间范围和公众号名称获取文章"""
+    service = ArticleService()
+    now = datetime.now()
+
+    article_a = WechatArticle(
+        nickname="公众号A",
+        article_title="A文章",
+        article_create_time=now - timedelta(hours=2),
+    )
+    article_b = WechatArticle(
+        nickname="公众号B",
+        article_title="B文章",
+        article_create_time=now - timedelta(hours=2),
+    )
+    db.add_all([article_a, article_b])
+    db.commit()
+
+    articles = service.get_articles_by_create_time_range(
+        start_time=now - timedelta(days=1),
+        end_time=now,
+        nickname="公众号A",
+    )
+
+    assert len(articles) == 1
+    assert articles[0]["nickname"] == "公众号A"
+
+
+def test_get_articles_by_create_time_range_with_nicknames(db):
+    """测试按创建时间范围和多个公众号名称获取文章"""
+    service = ArticleService()
+    now = datetime.now()
+
+    article_a = WechatArticle(
+        nickname="公众号A",
+        article_title="A文章",
+        article_create_time=now - timedelta(hours=2),
+    )
+    article_b = WechatArticle(
+        nickname="公众号B",
+        article_title="B文章",
+        article_create_time=now - timedelta(hours=2),
+    )
+    article_c = WechatArticle(
+        nickname="公众号C",
+        article_title="C文章",
+        article_create_time=now - timedelta(hours=2),
+    )
+    db.add_all([article_a, article_b, article_c])
+    db.commit()
+
+    articles = service.get_articles_by_create_time_range(
+        start_time=now - timedelta(days=1),
+        end_time=now,
+        nicknames=["公众号A", "公众号B"],
+    )
+
+    assert len(articles) == 2
+    assert {item["nickname"] for item in articles} == {"公众号A", "公众号B"}

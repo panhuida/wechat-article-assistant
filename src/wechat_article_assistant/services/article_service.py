@@ -602,3 +602,42 @@ class ArticleService:
         except Exception as e:
             logger.error(f"获取所有文章ID失败: {e}")
             return []
+
+    def get_articles_by_create_time_range(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        nickname: str | None = None,
+        nicknames: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        按文章创建时间范围获取文章列表
+
+        Args:
+            start_time: 开始时间（含）
+            end_time: 结束时间（含）
+            nickname: 公众号名称（可选）
+            nicknames: 公众号名称列表（可选）
+
+        Returns:
+            文章列表（按创建时间倒序）
+        """
+        try:
+            with get_db() as db:
+                articles = (
+                    db.query(WechatArticle)
+                    .filter(
+                        WechatArticle.article_create_time >= start_time,
+                        WechatArticle.article_create_time <= end_time,
+                    )
+                )
+                if nicknames:
+                    articles = articles.filter(WechatArticle.nickname.in_(nicknames))
+                elif nickname:
+                    articles = articles.filter(WechatArticle.nickname == nickname)
+
+                articles = articles.order_by(WechatArticle.article_create_time.desc()).all()
+                return [article.to_dict() for article in articles]
+        except Exception as e:
+            logger.error(f"按时间范围获取文章失败: {e}")
+            return []

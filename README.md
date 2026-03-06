@@ -263,6 +263,18 @@ wechat-cli download <article_url> --output E:\documents\文摘\公众号
 # 显示详细日志
 wechat-cli download <article_url> --verbose
 
+# 按时间范围下载文章（默认最近一天）
+wechat-cli download-articles
+
+# 指定时间范围 + 格式（html/markdown）+ 保存路径
+wechat-cli download-articles --start-time 2026-03-05 --end-time 2026-03-06 --format html --output E:\documents\文摘\公众号
+
+# 按公众号名称筛选下载
+wechat-cli download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 测试公众号
+
+# 按多个公众号名称筛选下载（逗号分隔）
+wechat-cli download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 公众号A,公众号B
+
 # 获取所有公众号最近5次发的文章
 wechat-cli collect-recent
 
@@ -283,6 +295,18 @@ python wechat-cli.py download <article_url> --output /path/to/output
 
 # 显示详细日志
 python wechat-cli.py download <article_url> --verbose
+
+# 按时间范围下载文章（默认最近一天）
+python wechat-cli.py download-articles
+
+# 指定时间范围 + 格式（html/markdown）+ 保存路径
+python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --format markdown --output /path/to/output
+
+# 按公众号名称筛选下载
+python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 测试公众号
+
+# 按多个公众号名称筛选下载（逗号分隔）
+python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 公众号A,公众号B
 
 # 获取所有公众号最近5次发的文章
 python wechat-cli.py collect-recent

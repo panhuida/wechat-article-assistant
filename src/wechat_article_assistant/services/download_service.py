@@ -7,7 +7,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup, Comment, Tag
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
 from ..config import config
 from ..utils.file_helper import (
@@ -27,6 +27,109 @@ class DownloadService:
     def __init__(self):
         """初始化下载服务"""
         self.download_dir = config.DOWNLOAD_DIR
+
+    def _inline_tag_to_markdown(self, tag: Tag | NavigableString) -> str:
+        """将行内节点转换为 Markdown 字符串"""
+        if isinstance(tag, NavigableString):
+            return str(tag)
+        if not isinstance(tag, Tag):
+            return ""
+
+        name = (tag.name or "").lower()
+        text = "".join(self._inline_tag_to_markdown(child) for child in tag.children).strip()
+
+        if name == "br":
+            return "\n"
+        if name == "a":
+            href = tag.get("href")
+            if isinstance(href, str) and href:
+                label = text or href
+                return f"[{label}]({href})"
+            return text
+        if name == "img":
+            src = tag.get("src")
+            alt = tag.get("alt", "image")
+            if isinstance(src, str) and src:
+                return f"![{alt}]({src})"
+            return ""
+        if name in {"strong", "b"}:
+            return f"**{text}**" if text else ""
+        if name in {"em", "i"}:
+            return f"*{text}*" if text else ""
+        if name == "code":
+            return f"`{text}`" if text else ""
+        return text
+
+    def _container_to_markdown(self, container: Tag) -> str:
+        """将内容容器转换为 Markdown 文本"""
+        blocks: list[str] = []
+
+        def append_block(text: str) -> None:
+            cleaned = text.strip()
+            if cleaned:
+                blocks.append(cleaned)
+
+        for child in container.children:
+            if isinstance(child, NavigableString):
+                append_block(str(child))
+                continue
+            if not isinstance(child, Tag):
+                continue
+
+            name = (child.name or "").lower()
+
+            if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+                level = int(name[1])
+                heading_text = "".join(
+                    self._inline_tag_to_markdown(node) for node in child.children
+                ).strip()
+                append_block(f"{'#' * level} {heading_text}")
+            elif name == "p":
+                paragraph = "".join(
+                    self._inline_tag_to_markdown(node) for node in child.children
+                ).strip()
+                append_block(paragraph)
+            elif name in {"ul", "ol"}:
+                is_ordered = name == "ol"
+                for idx, li in enumerate(child.find_all("li", recursive=False), start=1):
+                    item_text = "".join(
+                        self._inline_tag_to_markdown(node) for node in li.children
+                    ).strip()
+                    if not item_text:
+                        continue
+                    prefix = f"{idx}. " if is_ordered else "- "
+                    append_block(f"{prefix}{item_text}")
+            elif name == "blockquote":
+                quote_text = child.get_text("\n", strip=True)
+                if quote_text:
+                    append_block("\n".join(f"> {line}" for line in quote_text.splitlines()))
+            elif name == "pre":
+                code_text = child.get_text("\n", strip=True)
+                if code_text:
+                    append_block(f"```\n{code_text}\n```")
+            elif name == "img":
+                append_block(self._inline_tag_to_markdown(child))
+            else:
+                nested = self._container_to_markdown(child)
+                if nested:
+                    append_block(nested)
+
+        return "\n\n".join(blocks)
+
+    def _build_markdown_content(
+        self, soup: BeautifulSoup, article_title: str, article_url: str
+    ) -> str:
+        """根据清理后的页面结构构建 Markdown 内容"""
+        content_root = soup.find("div", id="js_content")
+        if not isinstance(content_root, Tag):
+            body = soup.find("body")
+            content_root = body if isinstance(body, Tag) else soup
+
+        lines = [f"# {article_title}", "", f"> 原文链接: {article_url}", ""]
+        content = self._container_to_markdown(content_root)
+        if content:
+            lines.append(content)
+        return "\n".join(lines).strip() + "\n"
 
     def _download_and_replace_image(
         self, img_url: str, img_index: Any, article_url: str, download_dir: Path, assets_dir: Path
@@ -828,6 +931,7 @@ class DownloadService:
         article_title: str,
         account_name: str = "未分类",
         save_dir: Path | None = None,
+        output_format: str = "html",
     ) -> tuple[bool, str]:
         """
         下载单篇文章（包含HTML、图片、CSS等资源）
@@ -837,6 +941,7 @@ class DownloadService:
             article_title: 文章标题
             account_name: 公众号名称
             save_dir: 保存目录（可选）
+            output_format: 保存格式（html 或 markdown）
 
         Returns:
             (是否成功, 消息)
@@ -939,33 +1044,38 @@ class DownloadService:
                 self._process_normal_article(soup)
 
             # 创建文章和图片文件夹
+            if output_format not in {"html", "markdown"}:
+                return False, f"不支持的保存格式: {output_format}"
+
             base_filename = sanitize_filename(article_title, max_length=max_filename_length)
-            article_path = account_dir / f"{base_filename}.html"
+            file_ext = "html" if output_format == "html" else "md"
+            article_path = account_dir / f"{base_filename}.{file_ext}"
             assets_dir = ensure_dir(account_dir / f"{base_filename}.assets")
 
             # === 下载并替换CSS ===
-            for link in soup.find_all("link", rel="stylesheet"):
-                if isinstance(link, Tag):
-                    css_url = link.get("href")
-                    if not css_url or not isinstance(css_url, str):
-                        continue
+            if output_format == "html":
+                for link in soup.find_all("link", rel="stylesheet"):
+                    if isinstance(link, Tag):
+                        css_url = link.get("href")
+                        if not css_url or not isinstance(css_url, str):
+                            continue
 
-                    css_url = urljoin(article_url, css_url)
-                    try:
-                        css_response = requests.get(css_url, timeout=15)
-                        if css_response.status_code == 200:
-                            css_filename = Path(css_url).name or "style.css"
-                            css_filename = f"{Path(css_filename).stem}_{hash(css_url) % 10000}{Path(css_filename).suffix}"
-                            css_path = assets_dir / css_filename
+                        css_url = urljoin(article_url, css_url)
+                        try:
+                            css_response = requests.get(css_url, timeout=15)
+                            if css_response.status_code == 200:
+                                css_filename = Path(css_url).name or "style.css"
+                                css_filename = f"{Path(css_filename).stem}_{hash(css_url) % 10000}{Path(css_filename).suffix}"
+                                css_path = assets_dir / css_filename
 
-                            with css_path.open("w", encoding="utf-8") as f:
-                                f.write(css_response.text)
+                                with css_path.open("w", encoding="utf-8") as f:
+                                    f.write(css_response.text)
 
-                            relative_css_path = css_path.relative_to(account_dir)
-                            link["href"] = relative_css_path.as_posix()
-                            logger.info(f"下载CSS成功: {css_filename}")
-                    except Exception as e:
-                        logger.warning(f"下载CSS失败: {css_url}, 错误: {e}")
+                                relative_css_path = css_path.relative_to(account_dir)
+                                link["href"] = relative_css_path.as_posix()
+                                logger.info(f"下载CSS成功: {css_filename}")
+                        except Exception as e:
+                            logger.warning(f"下载CSS失败: {css_url}, 错误: {e}")
 
             # === 下载并替换图片 ===
             img_tags = soup.find_all("img")
@@ -1025,12 +1135,16 @@ class DownloadService:
                 if isinstance(script, Tag):
                     script.decompose()
 
-            # 保存修改后的HTML
-            with article_path.open("w", encoding="utf-8") as f:
-                f.write(str(soup))
+            if output_format == "html":
+                with article_path.open("w", encoding="utf-8") as f:
+                    f.write(str(soup))
+            else:
+                markdown_content = self._build_markdown_content(soup, article_title, article_url)
+                with article_path.open("w", encoding="utf-8") as f:
+                    f.write(markdown_content)
 
             # 保存元数据文件
-            meta_path = account_dir / f"{base_filename}.html.meta.json"
+            meta_path = account_dir / f"{base_filename}.{file_ext}.meta.json"
             meta_data = {"source_url": article_url}
             with meta_path.open("w", encoding="utf-8") as f:
                 json.dump(meta_data, f, ensure_ascii=False, indent=4)
@@ -1044,7 +1158,10 @@ class DownloadService:
             return False, error_msg
 
     def download_articles_batch(
-        self, articles: list[dict[str, Any]], save_dir: Path | None = None
+        self,
+        articles: list[dict[str, Any]],
+        save_dir: Path | None = None,
+        output_format: str = "html",
     ) -> tuple[int, int, list[str]]:
         """
         批量下载文章
@@ -1052,6 +1169,7 @@ class DownloadService:
         Args:
             articles: 文章列表，每项包含 url, title, account_name
             save_dir: 保存目录（可选）
+            output_format: 保存格式（html 或 markdown）
 
         Returns:
             (成功数量, 失败数量, 错误消息列表)
@@ -1070,7 +1188,7 @@ class DownloadService:
                 errors.append(f"无效的文章数据: {article}")
                 continue
 
-            success, msg = self.download_article(url, title, account, save_dir)
+            success, msg = self.download_article(url, title, account, save_dir, output_format)
             if success:
                 success_count += 1
             else:
@@ -1081,7 +1199,7 @@ class DownloadService:
         return success_count, fail_count, errors
 
     def download_from_file(
-        self, file_path: str, save_dir: Path | None = None
+        self, file_path: str, save_dir: Path | None = None, output_format: str = "html"
     ) -> tuple[int, int, list[str]]:
         """
         从文件读取URL列表并下载
@@ -1094,6 +1212,7 @@ class DownloadService:
         Args:
             file_path: 文件路径（每行一个URL）
             save_dir: 保存目录（可选）
+            output_format: 保存格式（html 或 markdown）
 
         Returns:
             (成功数量, 失败数量, 错误消息列表)
@@ -1123,7 +1242,7 @@ class DownloadService:
                     {"url": url, "title": f"文章_{idx + 1}", "account_name": "批量下载"}
                 )
 
-            return self.download_articles_batch(articles, save_dir)
+            return self.download_articles_batch(articles, save_dir, output_format)
         except Exception as e:
             logger.error(f"从文件下载失败: {e}")
             return 0, 0, [str(e)]
