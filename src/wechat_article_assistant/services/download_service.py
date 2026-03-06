@@ -1,6 +1,7 @@
 """文章下载服务"""
 
 import json
+import html
 import re
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
+from ..browser.session_manager import SessionManager
 from ..config import config
 from ..utils.file_helper import (
     ensure_dir,
@@ -27,6 +29,107 @@ class DownloadService:
     def __init__(self):
         """初始化下载服务"""
         self.download_dir = config.DOWNLOAD_DIR
+        self.session_manager = SessionManager()
+
+    def _is_verification_page(self, soup: BeautifulSoup, html_content: str) -> bool:
+        """判断是否命中了微信的环境验证页"""
+        page_text = soup.get_text(" ", strip=True)
+        verification_signals = [
+            "环境异常",
+            "完成验证后即可继续访问",
+            "去验证",
+            "secitptpage/verify",
+        ]
+        return any(signal in page_text or signal in html_content for signal in verification_signals)
+
+    def _load_session_cookies(self) -> dict[str, str]:
+        """从本地会话文件中加载 cookies，供下载文章时复用"""
+        session_data = self.session_manager.load_session()
+        if not session_data:
+            return {}
+
+        cookies = session_data.get("cookies", [])
+        if not isinstance(cookies, list):
+            return {}
+
+        return {
+            cookie["name"]: cookie["value"]
+            for cookie in cookies
+            if isinstance(cookie, dict) and cookie.get("name") and cookie.get("value") is not None
+        }
+
+    def _fetch_article_response(
+        self, article_url: str, headers: dict[str, str]
+    ) -> tuple[requests.Response, bool]:
+        """获取文章页面，必要时自动使用本地会话重试一次"""
+        response = requests.get(article_url, headers=headers, timeout=20)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, "lxml")
+        if not self._is_verification_page(soup, response.text):
+            return response, False
+
+        session_cookies = self._load_session_cookies()
+        if not session_cookies:
+            return response, True
+
+        logger.warning("检测到环境验证页，尝试复用本地会话重新获取文章")
+        retried_response = requests.get(
+            article_url,
+            headers=headers,
+            cookies=session_cookies,
+            timeout=20,
+        )
+        retried_response.raise_for_status()
+        retried_soup = BeautifulSoup(retried_response.content, "lxml")
+        return retried_response, self._is_verification_page(retried_soup, retried_response.text)
+
+    def _has_meaningful_js_content(self, soup: BeautifulSoup) -> bool:
+        """判断页面中是否已经存在可直接使用的正文内容"""
+        content_root = soup.find("div", id="js_content")
+        if not isinstance(content_root, Tag):
+            return False
+
+        # 有块级正文或图片时，优先认为原页面已经包含有效内容。
+        if content_root.find(["p", "section", "article", "blockquote", "ul", "ol", "img"]):
+            return True
+
+        content_text = content_root.get_text(" ", strip=True)
+        return len(content_text) >= 20
+
+    def _decode_js_escaped_text(self, value: str) -> str:
+        """解码微信页面源码中的 JsDecode 文本"""
+        def hex_replace(match: re.Match[str]) -> str:
+            return chr(int(match.group(1), 16))
+
+        decoded = re.sub(r"\\x([0-9a-fA-F]{2})", hex_replace, value)
+        decoded = decoded.replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t")
+        decoded = decoded.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
+        return html.unescape(decoded)
+
+    def _extract_text_only_article_content(
+        self, soup: BeautifulSoup, html_content: str, fallback_content: str
+    ) -> str:
+        """提取纯文字文章正文，优先使用 text_page_info 中的真实内容"""
+        patterns = [
+            r"content_noencode\s*:\s*JsDecode\(['\"]((?:\\.|[^'\"])*)['\"]\)",
+            r"content\s*:\s*JsDecode\(['\"]((?:\\.|[^'\"])*)['\"]\)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, html_content, re.S)
+            if match:
+                extracted = self._decode_js_escaped_text(match.group(1))
+                if extracted.strip():
+                    logger.info("从 text_page_info 提取纯文字文章正文")
+                    return extracted
+
+        og_title_meta = soup.find("meta", property="og:title")
+        if og_title_meta and isinstance(og_title_meta, Tag):
+            og_title = og_title_meta.get("content", "")
+            if og_title:
+                logger.debug("从og:title提取纯文字文章内容（回退）")
+                return og_title
+
+        return fallback_content
 
     def _inline_tag_to_markdown(self, tag: Tag | NavigableString) -> str:
         """将行内节点转换为 Markdown 字符串"""
@@ -627,14 +730,9 @@ class DownloadService:
             ip_location_str = province_match.group(1)
             logger.debug(f"提取到IP归属地: {ip_location_str}")
 
-        # 从og:title提取原始内容（保留换行符）
-        original_content = article_title
-        og_title_meta = soup.find("meta", property="og:title")
-        if og_title_meta and isinstance(og_title_meta, Tag):
-            og_title = og_title_meta.get("content", "")
-            if og_title:
-                original_content = og_title
-                logger.debug("从og:title提取原始内容")
+        original_content = self._extract_text_only_article_content(
+            soup, html_content, article_title
+        )
 
         # 查找或创建 js_content 容器
         content_div = soup.find("div", id="js_content")
@@ -949,19 +1047,21 @@ class DownloadService:
         try:
             logger.info(f"开始下载文章: {article_title}")
 
-            # 创建公众号目录
-            base_dir = save_dir or self.download_dir
-            account_dir = ensure_dir(base_dir / sanitize_filename(account_name))
-
             # 获取文章HTML
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
             }
-            response = requests.get(article_url, headers=headers, timeout=20)
-            response.raise_for_status()
+            response, blocked_by_verification = self._fetch_article_response(article_url, headers)
+            if blocked_by_verification:
+                logger.error("文章下载失败: 命中微信环境验证页，无法获取正文")
+                return False, "下载文章失败: 命中微信环境验证页，请先完成登录验证后重试"
 
             # 使用 response.content 让 BeautifulSoup 自行处理编码
             soup = BeautifulSoup(response.content, "lxml")
+
+            # 创建公众号目录
+            base_dir = save_dir or self.download_dir
+            account_dir = ensure_dir(base_dir / sanitize_filename(account_name))
 
             # === 自动提取文章真实标题 ===
             extracted_title = None
@@ -1014,11 +1114,14 @@ class DownloadService:
                 item_show_type = int(item_show_type_match.group(1))
                 logger.info(f"检测到 item_show_type: {item_show_type}")
                 if item_show_type == 10:
-                    max_filename_length = 40
-                    is_text_only_article = True
-                    logger.info(
-                        f"item_show_type=10，这是纯文字文章（标题即内容），使用较短文件名长度: {max_filename_length}"
-                    )
+                    if self._has_meaningful_js_content(soup):
+                        logger.info("item_show_type=10，但页面已包含可用正文，按普通文章处理")
+                    else:
+                        max_filename_length = 40
+                        is_text_only_article = True
+                        logger.info(
+                            f"item_show_type=10，这是纯文字文章（标题即内容），使用较短文件名长度: {max_filename_length}"
+                        )
                 elif item_show_type == 8:
                     is_image_only_article = True
                     logger.info("item_show_type=8，这是纯图片文章")

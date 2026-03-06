@@ -409,6 +409,45 @@ def test_process_text_only_article_injects_paragraphs_and_meta_info():
     assert "第二段" in paragraphs[1].get_text()
 
 
+def test_process_text_only_article_prefers_text_page_info_content():
+    """测试纯文字文章优先使用 text_page_info 中的真实正文"""
+    service = DownloadService()
+    soup = BeautifulSoup(
+        """
+        <html>
+          <head>
+            <meta property="og:title" content="只有标题" />
+          </head>
+          <body></body>
+        </html>
+        """,
+        "html.parser",
+    )
+    html_content = """
+        <script>
+            var data = {
+                text_page_info: {
+                    content_noencode: JsDecode('第一段\\x0a\\x0a第二段')
+                }
+            };
+        </script>
+    """
+
+    service._process_text_only_article(
+        soup,
+        article_title="占位标题",
+        html_content=html_content,
+        article_url="https://mp.weixin.qq.com/s/text-page-info",
+    )
+
+    content_div = soup.find("div", id="js_content")
+    assert content_div is not None
+    paragraphs = content_div.find_all("p")
+    assert len(paragraphs) == 2
+    assert "第一段" in paragraphs[0].get_text()
+    assert "第二段" in paragraphs[1].get_text()
+
+
 def test_process_image_only_article_creates_content_from_picture_urls():
     """测试纯图片文章优先使用 JS 中的图片列表构建内容"""
     service = DownloadService()
@@ -509,3 +548,176 @@ def test_process_normal_article_removes_hidden_style():
     content_div = soup.find("div", id="js_content")
     assert content_div is not None
     assert content_div.has_attr("style") is False
+
+
+def test_download_article_item_show_type_10_with_existing_content_keeps_body(
+    monkeypatch, tmp_path: Path
+):
+    """测试 item_show_type=10 但已有正文时不误判为纯文字文章"""
+    service = DownloadService()
+    article_html = """
+    <html>
+      <head>
+        <title></title>
+        <meta property="og:title" content="从openclaw想到的" />
+      </head>
+      <body>
+        <div id="js_content">
+          <p>第一段正文。</p>
+          <p>第二段正文。</p>
+        </div>
+        <script>var item_show_type = 10;</script>
+      </body>
+    </html>
+    """
+
+    class MockResponse:
+        def __init__(self, text: str):
+            self.text = text
+            self.content = text.encode("utf-8")
+            self.status_code = 200
+            self.headers = {"Content-Type": "text/html"}
+
+        def raise_for_status(self):
+            return None
+
+    def mock_get(url, headers=None, timeout=20):
+        return MockResponse(article_html)
+
+    monkeypatch.setattr(
+        "wechat_article_assistant.services.download_service.requests.get",
+        mock_get,
+    )
+
+    success, message = service.download_article(
+        "https://mp.weixin.qq.com/s/test",
+        "占位标题",
+        "测试公众号",
+        save_dir=tmp_path,
+        output_format="markdown",
+    )
+
+    assert success is True
+    markdown_path = tmp_path / "测试公众号" / "从openclaw想到的.md"
+    assert markdown_path.exists(), message
+
+    content = markdown_path.read_text(encoding="utf-8")
+    assert "第一段正文。" in content
+    assert "第二段正文。" in content
+    assert "> 原文链接: https://mp.weixin.qq.com/s/test" in content
+
+
+def test_download_article_retries_with_session_when_verification_page_detected(
+    monkeypatch, tmp_path: Path
+):
+    """测试命中验证页时会自动使用本地会话重试一次"""
+    service = DownloadService()
+    verification_html = """
+    <html>
+      <body>
+        <h2>环境异常</h2>
+        <a id="js_verify">去验证</a>
+      </body>
+    </html>
+    """
+    article_html = """
+    <html>
+      <head><title>真实文章</title></head>
+      <body>
+        <div id="js_content"><p>正文恢复成功。</p></div>
+      </body>
+    </html>
+    """
+
+    class MockResponse:
+        def __init__(self, text: str):
+            self.text = text
+            self.content = text.encode("utf-8")
+            self.status_code = 200
+            self.headers = {"Content-Type": "text/html"}
+
+        def raise_for_status(self):
+            return None
+
+    requests_calls = []
+
+    def mock_get(url, headers=None, cookies=None, timeout=20):
+        requests_calls.append(cookies)
+        if len(requests_calls) == 1:
+            return MockResponse(verification_html)
+        return MockResponse(article_html)
+
+    monkeypatch.setattr(
+        "wechat_article_assistant.services.download_service.requests.get",
+        mock_get,
+    )
+    monkeypatch.setattr(
+        service.session_manager,
+        "load_session",
+        lambda force_reload=False: {"cookies": [{"name": "pass_ticket", "value": "cookie-value"}]},
+    )
+
+    success, message = service.download_article(
+        "https://mp.weixin.qq.com/s/test-retry",
+        "占位标题",
+        "测试公众号",
+        save_dir=tmp_path,
+        output_format="markdown",
+    )
+
+    assert success is True
+    assert "下载成功" in message
+    assert requests_calls[0] is None
+    assert requests_calls[1] == {"pass_ticket": "cookie-value"}
+    markdown_path = tmp_path / "测试公众号" / "真实文章.md"
+    assert "正文恢复成功。" in markdown_path.read_text(encoding="utf-8")
+
+
+def test_download_article_fails_cleanly_when_verification_page_persists(
+    monkeypatch, tmp_path: Path
+):
+    """测试持续命中验证页时返回明确错误而不落盘残缺文件"""
+    service = DownloadService()
+    verification_html = """
+    <html>
+      <body>
+        <h2>环境异常</h2>
+        <a id="js_verify">去验证</a>
+      </body>
+    </html>
+    """
+
+    class MockResponse:
+        def __init__(self, text: str):
+            self.text = text
+            self.content = text.encode("utf-8")
+            self.status_code = 200
+            self.headers = {"Content-Type": "text/html"}
+
+        def raise_for_status(self):
+            return None
+
+    def mock_get(url, headers=None, cookies=None, timeout=20):
+        return MockResponse(verification_html)
+
+    monkeypatch.setattr(
+        "wechat_article_assistant.services.download_service.requests.get",
+        mock_get,
+    )
+    monkeypatch.setattr(
+        service.session_manager,
+        "load_session",
+        lambda force_reload=False: {"cookies": [{"name": "pass_ticket", "value": "cookie-value"}]},
+    )
+
+    success, message = service.download_article(
+        "https://mp.weixin.qq.com/s/test-blocked",
+        "占位标题",
+        "测试公众号",
+        save_dir=tmp_path,
+        output_format="markdown",
+    )
+
+    assert success is False
+    assert "环境验证页" in message
+    assert not (tmp_path / "测试公众号").exists()
