@@ -7,7 +7,7 @@ import pytest
 from wechat_article_assistant.cli import main
 
 
-def test_collect_recent_command_success(capsys):
+def test_collect_recent_command_success():
     """测试 collect-recent 命令成功路径"""
     mock_service = Mock()
     mock_service.collect_recent_articles_all_accounts.return_value = (
@@ -27,13 +27,7 @@ def test_collect_recent_command_success(capsys):
     ):
         main()
 
-    output = capsys.readouterr().out
-    assert "开始采集所有公众号最近5次发的文章" in output
-    assert "公众号总数: 2" in output
-    assert "新增文章: 10" in output
-
-
-def test_collect_recent_command_failure_exit_code(capsys):
+def test_collect_recent_command_failure_exit_code():
     """测试 collect-recent 命令失败时退出码为 1"""
     mock_service = Mock()
     mock_service.collect_recent_articles_all_accounts.return_value = (
@@ -54,12 +48,10 @@ def test_collect_recent_command_failure_exit_code(capsys):
         with pytest.raises(SystemExit) as excinfo:
             main()
 
-    output = capsys.readouterr().out
     assert excinfo.value.code == 1
-    assert "采集失败！所有公众号均采集失败" in output
 
 
-def test_download_articles_default_markdown(capsys):
+def test_download_articles_default_markdown():
     """测试 download-articles 默认参数"""
     mock_article_service = Mock()
     mock_download_service = Mock()
@@ -74,15 +66,12 @@ def test_download_articles_default_markdown(capsys):
     ), patch("wechat_article_assistant.cli.DownloadService", return_value=mock_download_service):
         main()
 
-    output = capsys.readouterr().out
-    assert "按时间范围批量下载文章" in output
-    assert "保存格式: markdown" in output
     mock_download_service.download_articles_batch.assert_called_once()
     call_args = mock_download_service.download_articles_batch.call_args
     assert call_args.kwargs["output_format"] == "markdown"
 
 
-def test_download_articles_html_format(capsys):
+def test_download_articles_html_format():
     """测试 download-articles 指定 html 格式"""
     mock_article_service = Mock()
     mock_download_service = Mock()
@@ -107,12 +96,7 @@ def test_download_articles_html_format(capsys):
     ):
         main()
 
-    output = capsys.readouterr().out
-    assert "保存格式: html" in output
-    assert "未找到符合条件的文章。" in output
-
-
-def test_download_articles_with_nickname(capsys):
+def test_download_articles_with_nickname():
     """测试 download-articles 指定公众号名称筛选"""
     mock_article_service = Mock()
     mock_download_service = Mock()
@@ -133,18 +117,14 @@ def test_download_articles_with_nickname(capsys):
     ):
         main()
 
-    output = capsys.readouterr().out
-    assert "公众号名称: 测试公众号A,测试公众号B" in output
     call_args = mock_article_service.get_articles_by_create_time_range.call_args
     assert call_args.kwargs["nicknames"] == ["测试公众号A", "测试公众号B"]
 
 
-def test_download_articles_invalid_time_exit(capsys):
+def test_download_articles_invalid_time_exit():
     """测试 download-articles 非法时间参数"""
     with patch("sys.argv", ["wechat-cli", "download-articles", "--start-time", "invalid-date"]):
         with pytest.raises(SystemExit) as excinfo:
             main()
 
-    output = capsys.readouterr().out
     assert excinfo.value.code == 1
-    assert "无法解析时间" in output

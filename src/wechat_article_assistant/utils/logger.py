@@ -14,6 +14,7 @@ __all__ = [
     "app_logger",
     "collect_logger",
     "download_logger",
+    "cli_logger",
 ]
 
 
@@ -121,7 +122,10 @@ def setup_werkzeug_logger():
 
 
 def setup_logger(
-    name: str, log_file: str | None = None, level: str | None = None
+    name: str,
+    log_file: str | None = None,
+    level: str | None = None,
+    enable_console: bool = True,
 ) -> logging.Logger:
     """
     设置日志记录器
@@ -130,6 +134,7 @@ def setup_logger(
         name: 日志记录器名称
         log_file: 日志文件名（可选）
         level: 日志级别（可选）
+        enable_console: 是否输出到控制台（默认 True）
 
     Returns:
         配置好的日志记录器
@@ -137,6 +142,7 @@ def setup_logger(
     logger = logging.getLogger(name)
     log_level = getattr(logging, level or config.LOG_LEVEL)
     logger.setLevel(log_level)
+    logger.propagate = False
 
     # 避免重复添加处理器
     if logger.handlers:
@@ -146,10 +152,11 @@ def setup_logger(
     formatter = RelativePathFormatter("%(asctime)s %(levelname)-8s %(name)s:%(lineno)d %(message)s")
 
     # 控制台处理器
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(log_level)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    if enable_console:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(log_level)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
     # 文件处理器
     if log_file:
@@ -172,6 +179,7 @@ def setup_logger(
 app_logger = setup_logger("wechat_article_assistant", "app.log")
 collect_logger = setup_logger("wechat_article_assistant.collect", "collect.log")
 download_logger = setup_logger("wechat_article_assistant.download", "download.log")
+cli_logger = setup_logger("wechat_article_assistant.cli", "cli.log", enable_console=True)
 
 # 配置Werkzeug日志
 werkzeug_logger = setup_werkzeug_logger()
