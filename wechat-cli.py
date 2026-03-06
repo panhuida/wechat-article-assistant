@@ -5,6 +5,7 @@
   python wechat-cli.py download <article_url>
   python wechat-cli.py download --file <file_path>
   python wechat-cli.py download <article_url> --output <output_dir>
+  python wechat-cli.py collect-recent
 """
 
 import sys

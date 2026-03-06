@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from .services.article_service import ArticleService
 from .services.download_service import DownloadService
 
 __all__ = ["main"]
@@ -22,10 +23,18 @@ def main():
     download_parser.add_argument("--output", "-o", help="输出目录", default=None)
     download_parser.add_argument("--verbose", "-v", action="store_true", help="显示详细日志")
 
+    # 采集最近文章命令
+    collect_recent_parser = subparsers.add_parser(
+        "collect-recent", help="获取所有公众号最近5次发的文章"
+    )
+    collect_recent_parser.add_argument("--verbose", "-v", action="store_true", help="显示失败详情")
+
     args = parser.parse_args()
 
     if args.command == "download":
         download_command(args)
+    elif args.command == "collect-recent":
+        collect_recent_command(args)
     else:
         parser.print_help()
 
@@ -94,6 +103,40 @@ def download_command(args: argparse.Namespace) -> None:
         print("  # 显示详细日志")
         print("  wechat-cli download <article_url> --verbose")
         print()
+        sys.exit(1)
+
+
+def collect_recent_command(args: argparse.Namespace) -> None:
+    """获取所有公众号最近5次发的文章"""
+    article_service = ArticleService()
+
+    print(f"\n{'=' * 60}")
+    print("开始采集所有公众号最近5次发的文章...")
+    print(f"{'=' * 60}\n")
+
+    success, message, stats = article_service.collect_recent_articles_all_accounts()
+
+    print(f"\n{'=' * 60}")
+    if success:
+        print(f"✓ {message}")
+    else:
+        print(f"✗ {message}")
+
+    if stats:
+        print(f"{'-' * 60}")
+        print(f"公众号总数: {stats.get('total_accounts', 0)}")
+        print(f"成功采集: {stats.get('success_accounts', 0)}")
+        print(f"失败采集: {stats.get('failed_accounts', 0)}")
+        print(f"新增文章: {stats.get('total_articles', 0)}")
+
+        failed_list = stats.get("failed_list", [])
+        if failed_list and args.verbose:
+            print("\n失败详情:")
+            for failed_item in failed_list:
+                print(f"  ✗ {failed_item}")
+    print(f"{'=' * 60}\n")
+
+    if not success:
         sys.exit(1)
 
 

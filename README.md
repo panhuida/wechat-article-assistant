@@ -262,6 +262,12 @@ wechat-cli download <article_url> --output E:\documents\文摘\公众号
 
 # 显示详细日志
 wechat-cli download <article_url> --verbose
+
+# 获取所有公众号最近5次发的文章
+wechat-cli collect-recent
+
+# 显示采集失败详情
+wechat-cli collect-recent --verbose
 ```
 
 **Linux/Mac用户**：
@@ -277,6 +283,12 @@ python wechat-cli.py download <article_url> --output /path/to/output
 
 # 显示详细日志
 python wechat-cli.py download <article_url> --verbose
+
+# 获取所有公众号最近5次发的文章
+python wechat-cli.py collect-recent
+
+# 显示采集失败详情
+python wechat-cli.py collect-recent --verbose
 ```
 
 #### 批量下载文件格式
