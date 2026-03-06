@@ -1,7 +1,9 @@
 """配置管理模块"""
 
 import os
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -55,6 +57,20 @@ class Config:
         cls.LOG_DIR.mkdir(parents=True, exist_ok=True)
         cls.DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
         (BASE_DIR / "data").mkdir(parents=True, exist_ok=True)
+
+    @classmethod
+    def apply_overrides(cls, overrides: Mapping[str, Any] | None) -> None:
+        """应用运行时配置覆盖，供测试和应用工厂使用"""
+        if not overrides:
+            return
+
+        path_keys = {"LOG_DIR", "DOWNLOAD_DIR", "SESSION_FILE"}
+
+        for key, value in overrides.items():
+            if key in path_keys and value is not None:
+                setattr(cls, key, Path(value))
+                continue
+            setattr(cls, key, value)
 
 
 # 配置实例

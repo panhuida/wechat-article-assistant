@@ -129,7 +129,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-norecursedirs = "tests/manual"
+norecursedirs = "tests/e2e/manual"
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
@@ -137,11 +137,18 @@ addopts = [
     "--cov=wechat_article_assistant",
     "--cov-report=term-missing",
     "--cov-report=html",
+    "--cov-fail-under=60",
+    "--tb=short",
+    "--strict-markers",
     "-v",
 ]
 markers = [
+    "unit: marks fast isolated unit tests",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
+    "contract: marks fixture-driven contract tests",
+    "e2e: marks end-to-end tests",
+    "manual: marks manual or environment-dependent tests",
 ]
 
 [tool.pyright]

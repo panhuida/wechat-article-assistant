@@ -10,7 +10,16 @@ from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 
 from .config import config
 
-__all__ = ["Base", "WechatAccount", "WechatArticle", "get_db", "init_db", "engine", "SessionLocal"]
+__all__ = [
+    "Base",
+    "WechatAccount",
+    "WechatArticle",
+    "configure_database",
+    "get_db",
+    "init_db",
+    "engine",
+    "SessionLocal",
+]
 
 
 # 创建基类
@@ -25,6 +34,14 @@ engine = create_engine(config.DATABASE_URL, echo=False)
 
 # 创建会话工厂
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+def configure_database(database_url: str) -> None:
+    """重新配置数据库连接，供测试和应用初始化使用"""
+    global engine, SessionLocal
+
+    engine = create_engine(database_url, echo=False)
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 @contextmanager

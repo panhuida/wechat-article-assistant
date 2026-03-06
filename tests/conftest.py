@@ -1,43 +1,42 @@
-"""pytest配置文件"""
+"""pytest 配置文件"""
 
 import sys
 from pathlib import Path
 
 import pytest
 
-# 添加src目录到Python路径
+# 添加 src 目录到 Python 路径
 src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_env():
-    """设置测试环境"""
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-
-    from wechat_article_assistant import models
-    from wechat_article_assistant.config import config
-
-    # 使用内存数据库
-    config.DATABASE_URL = "sqlite:///:memory:"
-
-    # 重新创建引擎和会话工厂
-    models.engine = create_engine(config.DATABASE_URL, echo=False)
-    models.SessionLocal = sessionmaker(bind=models.engine, autoflush=False, autocommit=False)
-
-    # 初始化数据库表
-    models.init_db()
+@pytest.fixture(scope="function")
+def test_config(tmp_path: Path) -> dict[str, object]:
+    """生成每个测试独立的运行配置"""
+    return {
+        "TESTING": True,
+        "DATABASE_URL": f"sqlite:///{tmp_path / 'test.db'}",
+        "DOWNLOAD_DIR": tmp_path / "downloads",
+        "LOG_DIR": tmp_path / "logs",
+        "SESSION_FILE": tmp_path / "wechat_session.json",
+        "LOGIN_MODE": "popup",
+    }
 
 
-@pytest.fixture
-def app(setup_test_env):
-    """创建测试Flask应用"""
+@pytest.fixture(scope="function")
+def app(test_config: dict[str, object]):
+    """创建测试 Flask 应用"""
     from wechat_article_assistant import create_app
+    from wechat_article_assistant import models
 
-    app = create_app()
-    app.config["TESTING"] = True
-    return app
+    app = create_app(test_config)
+
+    models.Base.metadata.drop_all(bind=models.engine)
+    models.Base.metadata.create_all(bind=models.engine)
+
+    yield app
+
+    models.Base.metadata.drop_all(bind=models.engine)
 
 
 @pytest.fixture
@@ -47,13 +46,18 @@ def client(app):
 
 
 @pytest.fixture
-def db(setup_test_env):
+def db(app):
     """创建测试数据库会话"""
-    from wechat_article_assistant.models import Base, engine, get_db
+    from wechat_article_assistant.models import SessionLocal
 
-    # 每个测试前清空数据
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    with get_db() as session:
+    session = SessionLocal()
+    try:
         yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def db_session(db):
+    """为新测试提供更语义化的数据库会话名称"""
+    yield db

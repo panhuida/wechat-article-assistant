@@ -1,12 +1,12 @@
 """微信公众号文章阅读助手"""
 
+from collections.abc import Mapping
+from typing import Any
+
 from flask import Flask
 
 from .config import config
-from .models import init_db
-from .routes.article_routes import article_bp
-from .routes.main_routes import main_bp
-from .routes.wechat_routes import wechat_bp
+from .models import configure_database, init_db
 from .utils.logger import get_module_logger, setup_werkzeug_logger
 
 __version__ = "0.1.0"
@@ -18,13 +18,17 @@ logger = get_module_logger(__name__)
 setup_werkzeug_logger()
 
 
-def create_app() -> Flask:
+def create_app(test_config: Mapping[str, Any] | None = None) -> Flask:
     """
     创建Flask应用工厂函数
     """
+    config.apply_overrides(test_config)
+    configure_database(config.DATABASE_URL)
+
     app = Flask(__name__)
     app.config["SECRET_KEY"] = config.SECRET_KEY
     app.config["DEBUG"] = config.DEBUG
+    app.config["TESTING"] = bool(test_config.get("TESTING", False)) if test_config else False
 
     # 初始化配置
     config.init_app()
@@ -32,6 +36,10 @@ def create_app() -> Flask:
     # 初始化数据库
     init_db()
     logger.info("数据库初始化完成")
+
+    from .routes.article_routes import article_bp
+    from .routes.main_routes import main_bp
+    from .routes.wechat_routes import wechat_bp
 
     # 注册蓝图
     app.register_blueprint(main_bp)  # 注册主路由

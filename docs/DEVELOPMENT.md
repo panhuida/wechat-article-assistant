@@ -83,7 +83,6 @@ python wechat-cli.py download --file urls.txt
 wechat-article-assistant/
 ├── src/wechat_article_assistant/
 │   ├── __init__.py              # 包初始化
-│   ├── app.py                   # Flask应用入口
 │   ├── config.py                # 配置管理
 │   ├── models.py                # 数据模型
 │   ├── cli.py                   # 命令行工具
@@ -125,10 +124,12 @@ wechat-article-assistant/
 │
 ├── tests/                       # 测试
 │   ├── conftest.py              # pytest配置
-│   ├── test_models/             # 模型测试
-│   ├── test_routes/             # 路由测试
-│   ├── test_services/           # 服务测试
-│   └── manual/                  # 手动测试（不自动运行）
+│   ├── unit/                    # 单元测试
+│   ├── integration/             # 集成测试
+│   ├── contract/                # 契约/样本驱动测试
+│   ├── e2e/                     # 端到端与手动测试
+│   ├── factories/               # 测试数据工厂
+│   └── fixtures/                # 固定样本数据
 │
 ├── scripts/                     # 工具脚本
 │   ├── setup-uv.ps1             # Windows uv 安装脚本
@@ -207,20 +208,23 @@ def example_function(param1: str, param2: int) -> bool:
 ### 运行测试
 
 ```bash
-# 运行所有测试（自动跳过 manual 目录）
+# 运行所有测试（自动跳过 tests/e2e/manual）
 pytest
 
 # 运行特定测试文件
-pytest tests/test_models/test_models.py
+pytest tests/unit/test_models.py
 
 # 运行特定测试目录
-pytest tests/test_routes/
+pytest tests/integration/
 
 # 显示详细输出
 pytest -v
 
 # 生成覆盖率报告
 pytest --cov=wechat_article_assistant --cov-report=html
+
+# 当前覆盖率门槛
+pytest --cov-fail-under=60
 
 # 运行标记的测试
 pytest -m "not slow"  # 排除慢速测试
@@ -229,10 +233,12 @@ pytest -m integration  # 只运行集成测试
 
 ### 测试目录结构
 
-- `tests/test_models/` - 数据模型测试
-- `tests/test_routes/` - API 路由测试
-- `tests/test_services/` - 业务逻辑测试
-- `tests/manual/` - 手动测试（不会自动运行）
+- `tests/unit/` - 单元测试
+- `tests/integration/` - 集成测试
+- `tests/contract/` - 契约/样本驱动测试
+- `tests/e2e/manual/` - 手动测试（不会自动运行）
+- `tests/factories/` - 测试数据工厂
+- `tests/fixtures/` - 固定样本
 
 ### 编写测试
 
