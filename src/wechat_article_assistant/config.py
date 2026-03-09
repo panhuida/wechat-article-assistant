@@ -50,12 +50,23 @@ class Config:
     # browser: 启动Playwright浏览器窗口扫码登录
     LOGIN_MODE = os.getenv("LOGIN_MODE", "popup")
 
+    # 每日摘要自动化配置
+    DAILY_DIGEST_OUTPUT_DIR = Path(
+        os.getenv("DAILY_DIGEST_OUTPUT_DIR", "/home/pan/文摘/公众号")
+    )
+    DAILY_DIGEST_EMAIL_TO = os.getenv("DAILY_DIGEST_EMAIL_TO", "panhuida@qq.com")
+    DAILY_DIGEST_CODEX_MODEL = os.getenv("DAILY_DIGEST_CODEX_MODEL", "gpt-5.4")
+    DAILY_DIGEST_SMTP_USER = os.getenv("DAILY_DIGEST_SMTP_USER", "")
+    DAILY_DIGEST_SMTP_PASSWORD = os.getenv("DAILY_DIGEST_SMTP_PASSWORD", "")
+    DAILY_DIGEST_SMTP_HOST = os.getenv("DAILY_DIGEST_SMTP_HOST", "")
+
     # 确保目录存在
     @classmethod
     def init_app(cls) -> None:
         """初始化应用配置"""
         cls.LOG_DIR.mkdir(parents=True, exist_ok=True)
         cls.DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        cls.DAILY_DIGEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         (BASE_DIR / "data").mkdir(parents=True, exist_ok=True)
 
     @classmethod
