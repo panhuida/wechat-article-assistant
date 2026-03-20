@@ -9,7 +9,15 @@ git clone <repository-url>
 cd wechat-article-assistant
 ```
 
-### 2. 创建虚拟环境
+### 2. 安装依赖
+
+**推荐使用 uv：**
+
+```bash
+uv sync
+```
+
+如需手动激活虚拟环境：
 
 ```bash
 python -m venv venv
@@ -21,29 +29,24 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### 3. 安装依赖
-
-**使用传统的 pip：**
+**使用传统 pip：**
 
 ```bash
-# 安装项目（包含所有依赖）
-pip install -e .
-
-# 安装开发依赖
-pip install -e ".[dev]"
-
-# 或者使用 requirements.txt
+# 安装运行依赖
 pip install -r requirements.txt
+
+# 开发工具请按需单独安装
+pip install pytest pytest-cov ruff mypy pyright pytest-mock pytest-asyncio
 ```
 
-### 4. 安装 Playwright 浏览器
+### 3. 安装 Playwright 浏览器
 
 ```bash
 # 安装浏览器驱动
 playwright install chromium
 ```
 
-### 5. 配置环境变量
+### 4. 配置环境变量
 
 ```bash
 cp .env.example .env
@@ -66,15 +69,15 @@ WECHAT_MP_URL=https://mp.weixin.qq.com
 SESSION_FILE=data/wechat_session.json
 ```
 
-### 6. 运行应用
+### 5. 运行应用
 
 ```bash
 # Web 应用
-python run.py
+uv run python run.py
 
 # 或使用命令行工具
-python wechat-cli.py download <article_url>
-python wechat-cli.py download --file urls.txt
+uv run python wechat-cli.py download <article_url>
+uv run python wechat-cli.py download --file urls.txt
 ```
 
 ## 项目结构说明
@@ -209,26 +212,26 @@ def example_function(param1: str, param2: int) -> bool:
 
 ```bash
 # 运行所有测试（自动跳过 tests/e2e/manual）
-pytest
+uv run pytest
 
 # 运行特定测试文件
-pytest tests/unit/test_models.py
+uv run pytest tests/unit/test_models.py
 
 # 运行特定测试目录
-pytest tests/integration/
+uv run pytest tests/integration/
 
 # 显示详细输出
-pytest -v
+uv run pytest -v
 
 # 生成覆盖率报告
-pytest --cov=wechat_article_assistant --cov-report=html
+uv run pytest --cov-report=html
 
 # 当前覆盖率门槛
-pytest --cov-fail-under=60
+uv run pytest
 
 # 运行标记的测试
-pytest -m "not slow"  # 排除慢速测试
-pytest -m integration  # 只运行集成测试
+uv run pytest -m "not slow"  # 排除慢速测试
+uv run pytest -m integration  # 只运行集成测试
 ```
 
 ### 测试目录结构

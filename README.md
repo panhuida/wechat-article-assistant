@@ -365,11 +365,8 @@ wechat-article-assistant/
 #### 安装开发依赖
 
 ```bash
-# 同步所有依赖（包括开发依赖）
-uv sync --all-extras
-
-# 或者单独安装开发依赖
-uv pip install -e ".[dev]"
+# 同步项目依赖和开发依赖
+uv sync
 ```
 
 #### 添加新依赖
@@ -413,7 +410,8 @@ uv run pyright
 
 ```bash
 uv run pytest
-uv run pytest --cov
+uv run pytest -m integration
+uv run pytest -m "not slow"
 ```
 
 ---
@@ -425,7 +423,11 @@ uv run pytest --cov
 #### 安装开发依赖
 
 ```bash
-pip install -e ".[dev]"
+# 创建虚拟环境后安装运行依赖
+pip install -r requirements.txt
+
+# 开发工具请按需单独安装
+pip install pytest pytest-cov ruff mypy pyright pytest-mock pytest-asyncio
 ```
 
 #### 代码格式化和检查

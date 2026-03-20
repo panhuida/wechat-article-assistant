@@ -9,6 +9,22 @@ import pytest
 src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
+_MARKERS_BY_DIR = {
+    "unit": pytest.mark.unit,
+    "integration": pytest.mark.integration,
+    "contract": pytest.mark.contract,
+    "manual": pytest.mark.manual,
+}
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """按目录自动为测试打 marker。"""
+    for item in items:
+        path_parts = set(Path(str(item.fspath)).parts)
+        for directory, marker in _MARKERS_BY_DIR.items():
+            if directory in path_parts:
+                item.add_marker(marker)
+
 
 @pytest.fixture(scope="function")
 def test_config(tmp_path: Path) -> dict[str, object]:

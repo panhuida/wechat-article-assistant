@@ -35,27 +35,24 @@ dependencies = [
     "lxml>=6.0.2",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "ruff>=0.1.0",
-    "mypy>=1.7.0",
-    "pyright>=1.1.0",
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio",            # 如果有异步测试
-    "pytest-mock",               # mock 工具    
-    "types-requests>=2.31.0",
-    "types-beautifulsoup4",      # beautifulsoup4 的类型提示
-    "types-Pillow",              # Pillow 的类型提示
-    "pre-commit",                # Git hooks 管理    
-]
-
 [project.scripts]
 wechat-article-assistant = "wechat_article_assistant.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wechat_article_assistant"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/wechat_article_assistant",
+    "/run.py",
+    "/wechat-cli.py",
+    "/README.md",
+    "/LICENSE",
+]
 
 [dependency-groups]
 dev = [
@@ -71,11 +68,6 @@ dev = [
     "types-Pillow",
     "pre-commit",
 ]
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["wechat_article_assistant*"]
-exclude = ["tests*"]
 
 [tool.ruff]
 line-length = 100

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件面向在本仓库内工作的代码代理，目标是减少无效探索，保证改动方式与项目现状一致。
+本文件面向在本仓库内工作的AI Coding Agent，目标是减少无效探索，保证改动方式与项目现状一致。
 
 ## 项目概览
 
@@ -21,7 +21,6 @@
 - `src/wechat_article_assistant/static/`：静态资源
 - `tests/unit/`：单元测试
 - `tests/integration/`：集成测试
-- `tests/contract/`：契约/样本驱动测试
 - `tests/e2e/manual/`：手动 E2E，用例默认不自动运行
 - `docs/`：设计说明、修复说明、开发文档
 - `scripts/`：辅助脚本，例如诊断和 SQLite 到 PostgreSQL 迁移
@@ -72,7 +71,6 @@ uv run python wechat-cli.py collect-recent
 pytest
 pytest tests/unit/
 pytest tests/integration/
-pytest tests/contract/
 pytest -m "not slow"
 ```
 
