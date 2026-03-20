@@ -1,6 +1,5 @@
-from unittest.mock import patch
-
 from datetime import datetime
+from unittest.mock import patch
 
 from wechat_article_assistant.models import WechatArticle
 

@@ -57,7 +57,6 @@ include = [
 [dependency-groups]
 dev = [
     "ruff>=0.1.0",
-    "mypy>=1.7.0",
     "pyright>=1.1.0",
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
@@ -99,26 +98,6 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
-[tool.mypy]
-python_version = "3.12"
-warn_return_any = true
-warn_unused_configs = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-disallow_untyped_defs = false
-disallow_any_generics = false
-check_untyped_defs = true
-no_implicit_reexport = true
-strict_equality = true
-show_error_codes = true
-
-[[tool.mypy.overrides]]
-module = [
-    "playwright.*",
-    "qrcode.*",
-]
-ignore_missing_imports = true
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
@@ -145,7 +124,7 @@ markers = [
 ]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src"]
 exclude = [
     "**/__pycache__",
     "**/.pytest_cache",

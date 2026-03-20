@@ -1,6 +1,6 @@
 """浏览器实例管理模块（单例模式）"""
 
-from typing import Any
+from typing import Any, cast
 
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
@@ -56,6 +56,7 @@ class BrowserManager:
         # 如果已经启动，直接返回
         if self.is_running:
             logger.info("浏览器已在运行，复用现有实例")
+            assert self.page is not None
             return self.page
 
         try:
@@ -65,6 +66,7 @@ class BrowserManager:
             self.page = self.context.new_page()
             self._is_running = True
             logger.info("浏览器启动成功")
+            assert self.page is not None
             return self.page
         except Exception as e:
             logger.error(f"浏览器启动失败: {e}")
@@ -105,7 +107,7 @@ class BrowserManager:
             Cookie列表
         """
         if self.context:
-            return self.context.cookies()
+            return cast(list[dict[str, Any]], self.context.cookies())
         return []
 
     def set_cookies(self, cookies: list[dict[str, Any]]):
@@ -116,7 +118,7 @@ class BrowserManager:
             cookies: Cookie列表
         """
         if self.context:
-            self.context.add_cookies(cookies)  # type: ignore
+            self.context.add_cookies(cast(Any, cookies))
             logger.info(f"已设置 {len(cookies)} 个Cookies")
 
     def __enter__(self):

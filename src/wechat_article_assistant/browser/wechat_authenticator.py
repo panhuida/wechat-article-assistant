@@ -28,7 +28,7 @@ class WechatAuthenticator:
         self.login_url = f"{config.WECHAT_MP_URL}/"
         self._login_in_progress = False
         self._login_start_time: float | None = None
-        
+
         # 用于线程安全的状态共享
         self._login_status_lock = threading.Lock()
         self._login_status: dict[str, Any] = {}
@@ -294,7 +294,7 @@ class WechatAuthenticator:
     def start_qrcode_login(self) -> dict[str, Any]:
         """
         启动二维码登录流程（弹窗模式）
-        
+
         使用后台线程运行Playwright，避免跨线程访问问题
 
         Returns:
@@ -356,15 +356,15 @@ class WechatAuthenticator:
     def _login_thread_worker(self):
         """
         登录线程工作函数
-        
+
         在后台线程中运行Playwright，持续轮询登录状态
         """
         # 创建专用的BrowserManager实例
         browser_manager = BrowserManager()
-        
+
         try:
             logger.info("启动无头浏览器获取二维码...")
-            
+
             # 启动无头浏览器
             page = browser_manager.start(headless=True)
 
@@ -407,7 +407,7 @@ class WechatAuthenticator:
             # 开始轮询登录状态
             timeout = 300  # 5分钟超时
             start_time = time.time()
-            
+
             while not self._login_cancel_event.is_set():
                 # 检查超时
                 if time.time() - start_time > timeout:
@@ -421,7 +421,7 @@ class WechatAuthenticator:
                 # 检查登录状态
                 try:
                     current_url = page.url
-                    
+
                     # 检查URL是否包含登录成功的特征
                     if any(keyword in current_url for keyword in ["cgi-bin/home", "token=", "home/index"]):
                         logger.info(f"✓ 检测到登录成功！URL: {current_url}")
@@ -458,7 +458,7 @@ class WechatAuthenticator:
                     # 检查页面内容
                     try:
                         page_content = page.content()
-                        
+
                         # 检测已扫码等待确认
                         if "扫描成功" in page_content or "请在手机上确认" in page_content:
                             logger.info("检测到已扫码，等待确认")
@@ -468,7 +468,7 @@ class WechatAuthenticator:
                                     "status": "scanned",
                                     "message": "已扫码，请在手机上确认登录"
                                 }
-                        
+
                         # 检查二维码是否消失（可能需要刷新或已登录）
                         qrcode_element = page.query_selector('img[src*="scanloginqrcode"]')
                         if not qrcode_element:
@@ -484,7 +484,7 @@ class WechatAuthenticator:
                                     self._login_in_progress = False
                                 browser_manager.stop()
                                 return
-                                
+
                     except Exception as e:
                         logger.debug(f"检查页面内容时出错: {e}")
 
@@ -508,7 +508,7 @@ class WechatAuthenticator:
 
         Args:
             page: 浏览器页面对象
-            
+
         Returns:
             包含二维码base64数据的字典
         """
@@ -520,10 +520,10 @@ class WechatAuthenticator:
             try:
                 # 微信公众平台的二维码图片选择器
                 qrcode_selectors = [
-                    'img.qrcode_login_img',
+                    "img.qrcode_login_img",
                     'img[src*="scanloginqrcode"]',
-                    '.login__type__container__scan__qrcode img',
-                    '.qrcode img',
+                    ".login__type__container__scan__qrcode img",
+                    ".qrcode img",
                 ]
 
                 qrcode_element = None
@@ -542,16 +542,16 @@ class WechatAuthenticator:
                     try:
                         # 等待图片加载完成
                         time.sleep(1)
-                        
+
                         # 截取二维码元素
                         screenshot_bytes = qrcode_element.screenshot()
-                        
+
                         # 转换为 base64
-                        qrcode_base64 = base64.b64encode(screenshot_bytes).decode('utf-8')
+                        qrcode_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")
                         qrcode_data_url = f"data:image/png;base64,{qrcode_base64}"
-                        
+
                         logger.info("成功截取二维码图片")
-                        
+
                         return {
                             "success": True,
                             "status": "waiting",
@@ -571,23 +571,23 @@ class WechatAuthenticator:
                                 "qrcodeUrl": qrcode_url,
                                 "message": "请使用微信扫描二维码登录"
                             }
-                
+
                 # 没有找到二维码元素，尝试截取整个登录区域
                 logger.warning("未找到二维码图片元素，尝试截取登录区域")
-                
+
                 # 尝试找登录容器并截图
                 login_selectors = [
-                    '.login__type__container__scan',
-                    '.qrcode_login',
-                    '.login_qrcode_area',
+                    ".login__type__container__scan",
+                    ".qrcode_login",
+                    ".login_qrcode_area",
                 ]
-                
+
                 for selector in login_selectors:
                     try:
                         login_element = page.query_selector(selector)
                         if login_element:
                             screenshot_bytes = login_element.screenshot()
-                            qrcode_base64 = base64.b64encode(screenshot_bytes).decode('utf-8')
+                            qrcode_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")
                             qrcode_data_url = f"data:image/png;base64,{qrcode_base64}"
                             logger.info(f"成功截取登录区域: {selector}")
                             return {
@@ -598,7 +598,7 @@ class WechatAuthenticator:
                             }
                     except Exception:
                         continue
-                
+
                 return {"success": False, "message": "未找到二维码"}
 
             except Exception as e:
@@ -612,7 +612,7 @@ class WechatAuthenticator:
     def poll_login_status(self) -> dict[str, Any]:
         """
         轮询检查登录状态（弹窗模式）
-        
+
         只读取后台线程更新的共享状态变量，不直接访问Playwright
 
         Returns:
@@ -625,7 +625,7 @@ class WechatAuthenticator:
                 if self.session_manager.is_session_valid():
                     return {"success": True, "status": "success", "message": "已登录"}
                 return {"success": False, "status": "not_started", "message": "登录未开始"}
-            
+
             # 返回后台线程更新的状态
             return self._login_status.copy()
 

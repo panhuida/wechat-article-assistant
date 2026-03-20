@@ -7,8 +7,8 @@ from pathlib import Path
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
-from wechat_article_assistant import create_app
-from wechat_article_assistant.config import config
+from wechat_article_assistant import create_app  # noqa: E402
+from wechat_article_assistant.config import config  # noqa: E402
 
 if __name__ == "__main__":
     print("=" * 60)

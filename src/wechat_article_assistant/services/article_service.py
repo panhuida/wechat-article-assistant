@@ -188,7 +188,7 @@ class ArticleService:
                 return False, "获取会话数据失败", 0
 
             # 调用内部方法执行采集
-            return self._collect_single_page_with_session(cast(int, account_id), session_data)
+            return self._collect_single_page_with_session(account_id, session_data)
 
         except Exception as e:
             logger.error(f"采集文章失败: {e}")
@@ -387,10 +387,9 @@ class ArticleService:
                     item_show_type = appmsg.get("item_show_type", "")
 
                     # 当 item_show_type 为 10 时，只取标题前 50 个字符
-                    if item_show_type == 10:
-                        if len(title) > 50:
-                            title = title[:50] + "..."
-                            logger.info(f"item_show_type=10，截断标题: {title}")
+                    if item_show_type == 10 and len(title) > 50:
+                        title = title[:50] + "..."
+                        logger.info(f"item_show_type=10，截断标题: {title}")
 
                     # 创建文章记录
                     article = WechatArticle(
@@ -467,8 +466,9 @@ class ArticleService:
                         db.commit()
 
                         # 调用单页采集
+                        account_id = cast(int, account.id)
                         success, msg, count = self._collect_single_page_with_session(
-                            account.id, session_data
+                            account_id, session_data
                         )
 
                         if success:
@@ -493,8 +493,8 @@ class ArticleService:
 
                     finally:
                         # 恢复原始的begin和count
-                        account.begin = original_begin  # type: ignore[assignment]
-                        account.count = original_count  # type: ignore[assignment]
+                        account.begin = original_begin
+                        account.count = original_count
                         db.commit()
 
                     # 添加延时避免频率限制
@@ -624,7 +624,7 @@ class ArticleService:
         """
         try:
             with get_db() as db:
-                articles = (
+                query = (
                     db.query(WechatArticle)
                     .filter(
                         WechatArticle.article_create_time >= start_time,
@@ -632,11 +632,11 @@ class ArticleService:
                     )
                 )
                 if nicknames:
-                    articles = articles.filter(WechatArticle.nickname.in_(nicknames))
+                    query = query.filter(WechatArticle.nickname.in_(nicknames))
                 elif nickname:
-                    articles = articles.filter(WechatArticle.nickname == nickname)
+                    query = query.filter(WechatArticle.nickname == nickname)
 
-                articles = articles.order_by(WechatArticle.article_create_time.desc()).all()
+                articles = query.order_by(WechatArticle.article_create_time.desc()).all()
                 return [article.to_dict() for article in articles]
         except Exception as e:
             logger.error(f"按时间范围获取文章失败: {e}")

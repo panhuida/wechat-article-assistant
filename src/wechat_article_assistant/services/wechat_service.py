@@ -1,6 +1,6 @@
 """公众号管理服务"""
 
-from typing import Any
+from typing import Any, cast
 
 from ..models import WechatAccount, get_db
 from ..utils.logger import get_module_logger
@@ -97,7 +97,7 @@ class WechatService:
                 db.refresh(account)
 
                 logger.info(f"创建公众号成功: {account.nickname}")
-                return True, "创建成功", int(account.id)  # type: ignore
+                return True, "创建成功", cast(int, account.id)
 
         except Exception as e:
             logger.error(f"创建公众号失败: {e}")

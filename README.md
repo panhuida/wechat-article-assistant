@@ -389,7 +389,7 @@ uv remove <package-name>
 uv run python run.py
 uv run pytest
 uv run ruff check .
-uv run mypy src
+uv run pyright
 ```
 
 #### 代码格式化和检查
@@ -402,7 +402,6 @@ uv run ruff check . --fix
 #### 类型检查
 
 ```bash
-uv run mypy src
 uv run pyright
 ```
 
@@ -427,7 +426,7 @@ uv run pytest -m "not slow"
 pip install -r requirements.txt
 
 # 开发工具请按需单独安装
-pip install pytest pytest-cov ruff mypy pyright pytest-mock pytest-asyncio
+pip install pytest pytest-cov ruff pyright pytest-mock pytest-asyncio
 ```
 
 #### 代码格式化和检查
@@ -440,7 +439,7 @@ ruff check .
 #### 类型检查
 
 ```bash
-mypy src
+pyright
 ```
 
 #### 运行测试

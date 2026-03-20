@@ -1,10 +1,10 @@
 """文章下载服务"""
 
-import json
 import html
+import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urljoin
 
 import requests
@@ -125,7 +125,7 @@ class DownloadService:
         og_title_meta = soup.find("meta", property="og:title")
         if og_title_meta and isinstance(og_title_meta, Tag):
             og_title = og_title_meta.get("content", "")
-            if og_title:
+            if isinstance(og_title, str) and og_title:
                 logger.debug("从og:title提取纯文字文章内容（回退）")
                 return og_title
 
@@ -139,7 +139,11 @@ class DownloadService:
             return ""
 
         name = (tag.name or "").lower()
-        text = "".join(self._inline_tag_to_markdown(child) for child in tag.children).strip()
+        text = "".join(
+            self._inline_tag_to_markdown(child)
+            for child in tag.children
+            if isinstance(child, (Tag, NavigableString))
+        ).strip()
 
         if name == "br":
             return "\n"
@@ -184,19 +188,25 @@ class DownloadService:
             if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
                 level = int(name[1])
                 heading_text = "".join(
-                    self._inline_tag_to_markdown(node) for node in child.children
+                    self._inline_tag_to_markdown(node)
+                    for node in child.children
+                    if isinstance(node, (Tag, NavigableString))
                 ).strip()
                 append_block(f"{'#' * level} {heading_text}")
             elif name == "p":
                 paragraph = "".join(
-                    self._inline_tag_to_markdown(node) for node in child.children
+                    self._inline_tag_to_markdown(node)
+                    for node in child.children
+                    if isinstance(node, (Tag, NavigableString))
                 ).strip()
                 append_block(paragraph)
             elif name in {"ul", "ol"}:
                 is_ordered = name == "ol"
                 for idx, li in enumerate(child.find_all("li", recursive=False), start=1):
                     item_text = "".join(
-                        self._inline_tag_to_markdown(node) for node in li.children
+                        self._inline_tag_to_markdown(node)
+                        for node in li.children
+                        if isinstance(node, (Tag, NavigableString))
                     ).strip()
                     if not item_text:
                         continue
@@ -371,16 +381,14 @@ class DownloadService:
                     ip_wording_elem.string = ip_wording
                     # 显示父容器元素
                     ip_wording_wrp = soup.find("em", id="js_ip_wording_wrp")
-                    if isinstance(ip_wording_wrp, Tag):
-                        # 移除 display: none 样式
-                        if ip_wording_wrp.has_attr("style"):
-                            style = ip_wording_wrp["style"]
-                            if isinstance(style, str):
-                                new_style = re.sub(r"display\s*:\s*none\s*;?", "", style).strip()
-                                if new_style:
-                                    ip_wording_wrp["style"] = new_style
-                                else:
-                                    del ip_wording_wrp["style"]
+                    if isinstance(ip_wording_wrp, Tag) and ip_wording_wrp.has_attr("style"):
+                        style = ip_wording_wrp["style"]
+                        if isinstance(style, str):
+                            new_style = re.sub(r"display\s*:\s*none\s*;?", "", style).strip()
+                            if new_style:
+                                ip_wording_wrp["style"] = new_style
+                            else:
+                                del ip_wording_wrp["style"]
                     logger.info(f"成功注入IP归属地: {ip_wording}")
                 else:
                     logger.warning("未找到 js_ip_wording 元素")
@@ -422,7 +430,7 @@ class DownloadService:
         """
         try:
             # 1. 移除底部的互动工具栏（点赞、分享、评论等）
-            selectors_to_remove = [
+            selectors_to_remove: list[dict[str, Any]] = [
                 # 底部工具栏和互动区
                 {"id": "js_bottom_ad_area"},
                 {"class_": "rich_media_tool"},
@@ -467,7 +475,7 @@ class DownloadService:
             ]
 
             for selector in selectors_to_remove:
-                elements = soup.find_all(**selector)
+                elements = soup.find_all(**cast(Any, selector))
                 for elem in elements:
                     if isinstance(elem, Tag):
                         elem.decompose()
@@ -508,7 +516,10 @@ class DownloadService:
             ]
 
             for pattern, tag_name in ui_patterns:
-                elements = soup.find_all(tag_name, string=lambda s: s and pattern in str(s))
+                elements = soup.find_all(
+                    tag_name,
+                    string=lambda s, pattern=pattern: isinstance(s, str) and pattern in s,
+                )
                 for elem in elements:
                     if isinstance(elem, Tag):
                         # 检查父元素是否也应该被移除
@@ -549,10 +560,8 @@ class DownloadService:
 
                     # 如果元素为空或只包含空白
                     text = elem.get_text(strip=True)
-                    if not text:
-                        # 检查是否包含图片
-                        if not elem.find("img"):
-                            elements_to_remove.append(elem)
+                    if not text and not elem.find("img"):
+                        elements_to_remove.append(elem)
 
             # 批量删除
             for elem in elements_to_remove:
@@ -570,22 +579,22 @@ class DownloadService:
                         if is_all_punctuation:
                             # 检查是否在段落中间（如果有相邻文本节点，可能是有用的标点）
                             parent = elem.parent
-                            if isinstance(parent, Tag):
-                                # 如果父元素是body或html，或者元素独立存在，则删除
-                                if parent.name in ["body", "html", "div", "section"]:
-                                    elem.decompose()
-                                # 或者元素前后都没有实质内容
-                                elif not (
-                                    elem.previous_sibling
-                                    and isinstance(elem.previous_sibling, str)
-                                    and elem.previous_sibling.strip()
-                                ):
-                                    if not (
+                            if isinstance(parent, Tag) and (
+                                parent.name in ["body", "html", "div", "section"]
+                                or (
+                                    not (
+                                        elem.previous_sibling
+                                        and isinstance(elem.previous_sibling, str)
+                                        and elem.previous_sibling.strip()
+                                    )
+                                    and not (
                                         elem.next_sibling
                                         and isinstance(elem.next_sibling, str)
                                         and elem.next_sibling.strip()
-                                    ):
-                                        elem.decompose()
+                                    )
+                                )
+                            ):
+                                elem.decompose()
 
             # 7. 简化清理策略：只移除UI元素，完全保留原文容器结构
             # 不修改任何容器的样式，确保与原文完全一致
@@ -633,7 +642,7 @@ class DownloadService:
         Returns:
             图片URL列表
         """
-        picture_urls = []
+        picture_urls: list[str] = []
 
         # 查找picture_page_info_list数组
         list_start_pattern = r"picture_page_info_list\s*:\s*\["
@@ -650,10 +659,7 @@ class DownloadService:
         temp_text = html_content[start_pos : start_pos + 80000]
         end_match = re.search(end_pattern, temp_text)
 
-        if end_match:
-            end_pos = start_pos + end_match.start()
-        else:
-            end_pos = start_pos + 50000
+        end_pos = start_pos + end_match.start() if end_match else start_pos + 50000
 
         list_content = html_content[start_pos:end_pos]
 
@@ -845,7 +851,7 @@ class DownloadService:
         og_title_meta = soup.find("meta", property="og:title")
         if og_title_meta and isinstance(og_title_meta, Tag):
             og_title = og_title_meta.get("content", "")
-            if og_title:
+            if isinstance(og_title, str) and og_title:
                 image_title = og_title
                 logger.debug(f"从og:title提取标题: {image_title}")
 
@@ -853,7 +859,9 @@ class DownloadService:
         description = ""
         og_desc_meta = soup.find("meta", property="og:description")
         if og_desc_meta and isinstance(og_desc_meta, Tag):
-            description = og_desc_meta.get("content", "")
+            og_description = og_desc_meta.get("content", "")
+            if isinstance(og_description, str):
+                description = og_description
 
         # 提取滑动图片信息
         picture_urls = self._extract_picture_urls_from_js_array(html_content)
@@ -926,12 +934,11 @@ class DownloadService:
                 decoded_desc = html.unescape(decoded_desc)
                 decoded_desc = decoded_desc.replace("\n", "<br>")
 
-                from bs4 import BeautifulSoup as BS
-
-                temp_soup = BS(f"<div>{decoded_desc}</div>", "html.parser")
-
-                for child in list(temp_soup.div.children):
-                    desc_div.append(child)
+                temp_soup = BeautifulSoup(f"<div>{decoded_desc}</div>", "html.parser")
+                temp_container = temp_soup.div
+                if isinstance(temp_container, Tag):
+                    for child in list(temp_container.children):
+                        desc_div.append(child)
 
                 content_div.append(desc_div)
 
@@ -990,7 +997,7 @@ class DownloadService:
                         img_container.append(img_copy)
 
                         img_src = img.get("src", "")
-                        if img_src:
+                        if isinstance(img_src, str) and img_src:
                             link_div = soup.new_tag("div")
                             link_div["style"] = "font-size: 12px; color: #999;"
 
@@ -1075,9 +1082,11 @@ class DownloadService:
             # 如果没有找到或标题为空，尝试从 og:title meta标签提取
             if not extracted_title:
                 og_title = soup.find("meta", property="og:title")
-                if isinstance(og_title, Tag) and og_title.get("content"):
-                    extracted_title = og_title.get("content", "").strip()
-                    logger.info(f"从 og:title 提取标题: {extracted_title[:50]}...")
+                if isinstance(og_title, Tag):
+                    og_title_content = og_title.get("content", "")
+                    if isinstance(og_title_content, str) and og_title_content:
+                        extracted_title = og_title_content.strip()
+                        logger.info(f"从 og:title 提取标题: {extracted_title[:50]}...")
 
             # 如果还没有找到，尝试从 <h1> 提取
             if not extracted_title:
@@ -1284,7 +1293,8 @@ class DownloadService:
         for article in articles:
             url = article.get("url") or article.get("article_link")
             title = article.get("title") or article.get("article_title")
-            account = article.get("account_name") or article.get("nickname", "未分类")
+            raw_account = article.get("account_name") or article.get("nickname", "未分类")
+            account = raw_account if isinstance(raw_account, str) else "未分类"
 
             if not isinstance(url, str) or not isinstance(title, str):
                 fail_count += 1

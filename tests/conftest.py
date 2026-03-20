@@ -42,8 +42,7 @@ def test_config(tmp_path: Path) -> dict[str, object]:
 @pytest.fixture(scope="function")
 def app(test_config: dict[str, object]):
     """创建测试 Flask 应用"""
-    from wechat_article_assistant import create_app
-    from wechat_article_assistant import models
+    from wechat_article_assistant import create_app, models
 
     app = create_app(test_config)
 

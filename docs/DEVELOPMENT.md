@@ -36,7 +36,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # 开发工具请按需单独安装
-pip install pytest pytest-cov ruff mypy pyright pytest-mock pytest-asyncio
+pip install pytest pytest-cov ruff pyright pytest-mock pytest-asyncio
 ```
 
 ### 3. 安装 Playwright 浏览器
@@ -170,17 +170,12 @@ ruff check --fix .
 
 项目支持两种类型检查工具：
 
-**使用 mypy：**
-```bash
-mypy src
-```
-
 **使用 pyright：**
 ```bash
 pyright
 ```
 
-配置详见 `pyproject.toml` 中的 `[tool.mypy]` 和 `[tool.pyright]` 部分。
+配置详见 `pyproject.toml` 中的 `[tool.pyright]` 部分。
 
 ### 注释规范
 
@@ -684,7 +679,6 @@ python scripts/diagnose.py
 
 ### Python 工具
 - [Ruff 文档](https://docs.astral.sh/ruff/) - 代码检查和格式化
-- [mypy 文档](https://mypy.readthedocs.io/) - 类型检查
 - [pytest 文档](https://docs.pytest.org/) - 测试框架
 - [uv 文档](https://docs.astral.sh/uv/) - Python 包管理器
 
@@ -712,7 +706,7 @@ ruff format .
 ruff check --fix .
 
 # 类型检查
-mypy src
+pyright
 
 # 运行测试
 pytest

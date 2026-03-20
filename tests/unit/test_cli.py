@@ -44,9 +44,8 @@ def test_collect_recent_command_failure_exit_code():
 
     with patch("sys.argv", ["wechat-cli", "collect-recent"]), patch(
         "wechat_article_assistant.cli.ArticleService", return_value=mock_service
-    ):
-        with pytest.raises(SystemExit) as excinfo:
-            main()
+    ), pytest.raises(SystemExit) as excinfo:
+        main()
 
     assert excinfo.value.code == 1
 
@@ -123,8 +122,9 @@ def test_download_articles_with_nickname():
 
 def test_download_articles_invalid_time_exit():
     """测试 download-articles 非法时间参数"""
-    with patch("sys.argv", ["wechat-cli", "download-articles", "--start-time", "invalid-date"]):
-        with pytest.raises(SystemExit) as excinfo:
-            main()
+    with patch(
+        "sys.argv", ["wechat-cli", "download-articles", "--start-time", "invalid-date"]
+    ), pytest.raises(SystemExit) as excinfo:
+        main()
 
     assert excinfo.value.code == 1

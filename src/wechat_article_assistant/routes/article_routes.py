@@ -80,14 +80,13 @@ def _check_login_required():
             })
     else:
         # 有会话但可能已失效，尝试验证
-        if not wechat_auth._verify_session():
-            if config.LOGIN_MODE == "popup":
-                return jsonify({
-                    "success": False,
-                    "needLogin": True,
-                    "loginMode": "popup",
-                    "message": "会话已失效，请重新扫码登录"
-                })
+        if not wechat_auth._verify_session() and config.LOGIN_MODE == "popup":
+            return jsonify({
+                "success": False,
+                "needLogin": True,
+                "loginMode": "popup",
+                "message": "会话已失效，请重新扫码登录"
+            })
     return None
 
 
@@ -97,7 +96,7 @@ def collect_single_page(account_id: int):
     login_response = _check_login_required()
     if login_response:
         return login_response
-    
+
     success, message, count = article_service.collect_articles_single_page(account_id)
     return jsonify({"success": success, "message": message, "count": count})
 
@@ -108,7 +107,7 @@ def collect_all(account_id: int):
     login_response = _check_login_required()
     if login_response:
         return login_response
-    
+
     success, message, count = article_service.collect_articles_all(account_id)
     return jsonify({"success": success, "message": message, "count": count})
 

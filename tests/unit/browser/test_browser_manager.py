@@ -82,9 +82,8 @@ def test_context_manager_stops_browser_on_exit():
     """测试上下文管理器退出时自动停止浏览器"""
     manager = BrowserManager()
 
-    with patch.object(manager, "stop") as mock_stop:
-        with manager as context_manager:
-            assert context_manager is manager
+    with patch.object(manager, "stop") as mock_stop, manager as context_manager:
+        assert context_manager is manager
 
     mock_stop.assert_called_once()
 

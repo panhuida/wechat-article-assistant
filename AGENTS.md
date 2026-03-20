@@ -5,7 +5,7 @@
 ## 项目概览
 
 - 项目名称：`wechat-article-assistant`
-- 技术栈：Python 3.12、Flask、SQLAlchemy、Playwright、pytest、Ruff、mypy、pyright
+- 技术栈：Python 3.12、Flask、SQLAlchemy、Playwright、pytest、Ruff、pyright
 - 包目录：`src/wechat_article_assistant`
 - Web 入口：`run.py`
 - CLI 入口：`wechat-cli.py` 或 `python -m wechat_article_assistant.cli`
@@ -21,6 +21,7 @@
 - `src/wechat_article_assistant/static/`：静态资源
 - `tests/unit/`：单元测试
 - `tests/integration/`：集成测试
+- `tests/contract/`：契约/样本驱动测试（当前可能为空）
 - `tests/e2e/manual/`：手动 E2E，用例默认不自动运行
 - `docs/`：设计说明、修复说明、开发文档
 - `scripts/`：辅助脚本，例如诊断和 SQLite 到 PostgreSQL 迁移
@@ -32,6 +33,7 @@
 3. 涉及浏览器登录、二维码、会话复用的改动，优先检查 `browser/` 下的现有抽象，不要重复造一套流程。
 4. 涉及数据库行为的改动，同时检查 `models.py`、服务层调用点和对应测试夹具。
 5. 除非任务明确要求，不要修改 `data/`、`logs/`、`htmlcov/`、`.env` 里的本地运行产物。
+6. 若发现工作区已有删除、重命名或迁移中的文件，不要默认恢复；先基于当前工作区状态继续工作，除非任务明确要求恢复。
 
 ## 本地命令
 
@@ -43,9 +45,13 @@
 uv sync
 ```
 
-如需直接使用 `pytest`、`ruff`、`mypy`、`pyright` 等命令，可先激活虚拟环境：
+如需直接使用 `pytest`、`ruff`、`pyright` 等命令，可先激活虚拟环境：
 
 ```bash
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+
+# Linux/macOS
 source .venv/bin/activate
 ```
 
@@ -68,10 +74,11 @@ uv run python wechat-cli.py collect-recent
 ### 运行测试
 
 ```bash
-pytest
-pytest tests/unit/
-pytest tests/integration/
-pytest -m "not slow"
+uv run pytest
+uv run pytest tests/unit/
+uv run pytest tests/integration/
+uv run pytest -m integration
+uv run pytest -m "not slow"
 ```
 
 说明：
@@ -79,15 +86,15 @@ pytest -m "not slow"
 - `pytest` 配置写在 `pyproject.toml`
 - 默认覆盖率门槛为 `60`
 - `tests/e2e/manual` 已在 pytest 配置中排除，除非任务明确要求，不要把手动测试加入默认测试流
+- `tests/` 下的测试会按目录自动打 marker：`unit`、`integration`、`contract`、`manual`
 
 ### 代码质量检查
 
 ```bash
-ruff format .
-ruff check .
-ruff check --fix .
-mypy src
-pyright
+uv run ruff format .
+uv run ruff check .
+uv run ruff check . --fix
+uv run pyright
 ```
 
 ## 编码约定
@@ -105,16 +112,18 @@ pyright
 - 如果新增配置项，评估是否需要同步扩展 `test_config` fixture。
 - 浏览器相关测试尽量保持可 mock；只有在必须验证真实 Playwright 行为时才放入手动或 E2E 测试。
 - 若修改下载逻辑、HTML 清理、图片处理、文章解析逻辑，优先补 `unit` 或 `contract` 测试，而不是只做人工验证。
+- 非必要不要在测试文件里重复手工添加目录 marker，优先复用 `tests/conftest.py` 中的自动标记机制。
 
 ## 提交前自检
 
 在完成代码改动后，尽量执行与改动范围匹配的最小验证：
 
-- Python 代码改动：`ruff check .`，必要时 `ruff format .`
-- 业务逻辑改动：运行相关 `pytest` 文件或目录
-- 类型影响较大：补跑 `mypy src` 或 `pyright`
+- Python 代码改动：`uv run ruff check .`，必要时 `uv run ruff format .`
+- 业务逻辑改动：运行相关 `uv run pytest` 文件或目录
+- 类型影响较大：补跑 `uv run pyright`
 - 涉及路由：至少跑对应 `tests/integration/` 用例
 - 涉及 CLI：至少跑对应 `tests/unit/test_cli.py`
+- 若仓库存在 `.github/workflows/`，确保本次改动不会破坏其中的 `ruff`、`pyright`、`pytest` 检查链路
 
 ## 额外说明
 

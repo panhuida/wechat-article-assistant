@@ -1,7 +1,6 @@
 import json
-from unittest.mock import Mock, patch
-
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
 
 from wechat_article_assistant.models import WechatAccount, WechatArticle
 from wechat_article_assistant.services.article_service import ArticleService
