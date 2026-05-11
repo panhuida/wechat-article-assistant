@@ -53,9 +53,9 @@
 
 ## 🚀 快速开始
 
-### 方式一：使用 uv（推荐⚡）
+### 使用 uv
 
-[uv](https://github.com/astral-sh/uv) 是一个极快的 Python 包管理器，比 pip 快 10-100 倍。
+本项目只使用 [uv](https://github.com/astral-sh/uv) 管理依赖和运行命令。
 
 #### 1. 安装 uv
 
@@ -78,18 +78,12 @@ cd wechat-article-assistant
 
 # 创建虚拟环境并安装依赖（一条命令完成）
 uv sync
-
-# 激活虚拟环境
-# Windows
-.venv\Scripts\activate
-# Linux/macOS
-source .venv/bin/activate
 ```
 
 #### 3. 安装Playwright浏览器
 
 ```bash
-playwright install chromium
+uv run playwright install chromium
 ```
 
 #### 4. 配置环境变量
@@ -104,63 +98,7 @@ cp .env.example .env
 #### 5. 启动应用
 
 ```bash
-# 使用 uv 运行（推荐）
 uv run python run.py
-
-# 或在激活虚拟环境后运行
-python run.py
-```
-
-访问 http://localhost:5000
-
----
-
-### 方式二：使用传统 pip
-
-#### 1. 克隆项目
-
-```bash
-git clone <repository-url>
-cd wechat-article-assistant
-```
-
-#### 2. 创建虚拟环境
-
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
-# Linux/macOS
-python -m venv venv
-source venv/bin/activate
-```
-
-#### 3. 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-#### 4. 安装Playwright浏览器
-
-```bash
-playwright install chromium
-```
-
-#### 5. 配置环境变量
-
-```bash
-# Windows
-copy .env.example .env
-# Linux/macOS
-cp .env.example .env
-```
-
-#### 6. 启动应用
-
-```bash
-python run.py
 ```
 
 访问 http://localhost:5000
@@ -225,11 +163,7 @@ DATABASE_URL=postgresql://username:password@localhost:5432/wechat_assistant
 2. 运行迁移脚本：
 
 ```bash
-# Windows
-python scripts/migrate_to_pg.py
-
-# Linux/macOS
-python3 scripts/migrate_to_pg.py
+uv run python scripts/migrate_to_pg.py
 ```
 
 脚本会自动：
@@ -244,75 +178,75 @@ python3 scripts/migrate_to_pg.py
 
 ### 命令行工具使用
 
-本工具提供多种使用方式，任选其一即可。
+以下命令均通过 `uv run` 在项目环境中执行。
 
-#### 方式一：使用简化脚本（推荐）
+#### 常用命令
 
 **Windows用户**：
 
 ```bash
 # 下载单个文章
-wechat-cli download <article_url>
+uv run python wechat-cli.py download <article_url>
 
 # 批量下载
-wechat-cli download --file urls.txt
+uv run python wechat-cli.py download --file urls.txt
 
 # 指定输出目录
-wechat-cli download <article_url> --output E:\documents\文摘\公众号
+uv run python wechat-cli.py download <article_url> --output E:\documents\文摘\公众号
 
 # 显示详细日志
-wechat-cli download <article_url> --verbose
+uv run python wechat-cli.py download <article_url> --verbose
 
 # 按时间范围下载文章（默认最近一天）
-wechat-cli download-articles
+uv run python wechat-cli.py download-articles
 
 # 指定时间范围 + 格式（html/markdown）+ 保存路径
-wechat-cli download-articles --start-time 2026-03-05 --end-time 2026-03-06 --format html --output E:\documents\文摘\公众号
+uv run python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --format html --output E:\documents\文摘\公众号
 
 # 按公众号名称筛选下载
-wechat-cli download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 测试公众号
+uv run python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 测试公众号
 
 # 按多个公众号名称筛选下载（逗号分隔）
-wechat-cli download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 公众号A,公众号B
+uv run python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 公众号A,公众号B
 
 # 获取所有公众号最近5次发的文章
-wechat-cli collect-recent
+uv run python wechat-cli.py collect-recent
 
 # 显示采集失败详情
-wechat-cli collect-recent --verbose
+uv run python wechat-cli.py collect-recent --verbose
 ```
 
 **Linux/Mac用户**：
 ```bash
 # 下载单个文章
-python wechat-cli.py download <article_url>
+uv run python wechat-cli.py download <article_url>
 
 # 批量下载
-python wechat-cli.py download --file urls.txt
+uv run python wechat-cli.py download --file urls.txt
 
 # 指定输出目录
-python wechat-cli.py download <article_url> --output /path/to/output
+uv run python wechat-cli.py download <article_url> --output /path/to/output
 
 # 显示详细日志
-python wechat-cli.py download <article_url> --verbose
+uv run python wechat-cli.py download <article_url> --verbose
 
 # 按时间范围下载文章（默认最近一天）
-python wechat-cli.py download-articles
+uv run python wechat-cli.py download-articles
 
 # 指定时间范围 + 格式（html/markdown）+ 保存路径
-python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --format markdown --output /path/to/output
+uv run python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --format markdown --output /path/to/output
 
 # 按公众号名称筛选下载
-python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 测试公众号
+uv run python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 测试公众号
 
 # 按多个公众号名称筛选下载（逗号分隔）
-python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 公众号A,公众号B
+uv run python wechat-cli.py download-articles --start-time 2026-03-05 --end-time 2026-03-06 --nickname 公众号A,公众号B
 
 # 获取所有公众号最近5次发的文章
-python wechat-cli.py collect-recent
+uv run python wechat-cli.py collect-recent
 
 # 显示采集失败详情
-python wechat-cli.py collect-recent --verbose
+uv run python wechat-cli.py collect-recent --verbose
 ```
 
 #### 批量下载文件格式
@@ -348,8 +282,8 @@ wechat-article-assistant/
 ├── logs/                            # 日志目录
 ├── tests/                           # 测试目录
 ├── docs/                            # 文档目录
-├── requirements.txt                 # 依赖列表
 ├── pyproject.toml                   # 项目配置
+├── uv.lock                          # uv 锁定文件
 ├── run.py                           # 启动脚本
 └── README.md                        # 项目说明
 ```
@@ -360,7 +294,7 @@ wechat-article-assistant/
 
 ## 🔧 开发
 
-### 方式一：使用 uv（推荐）
+### 使用 uv
 
 #### 安装开发依赖
 
@@ -389,7 +323,7 @@ uv remove <package-name>
 uv run python run.py
 uv run pytest
 uv run ruff check .
-uv run pyright
+uv run ty check
 ```
 
 #### 代码格式化和检查
@@ -402,7 +336,7 @@ uv run ruff check . --fix
 #### 类型检查
 
 ```bash
-uv run pyright
+uv run ty check
 ```
 
 #### 运行测试
@@ -414,43 +348,6 @@ uv run pytest -m "not slow"
 ```
 
 ---
-
-
-
-### 方式二：使用传统 pip
-
-#### 安装开发依赖
-
-```bash
-# 创建虚拟环境后安装运行依赖
-pip install -r requirements.txt
-
-# 开发工具请按需单独安装
-pip install pytest pytest-cov ruff pyright pytest-mock pytest-asyncio
-```
-
-#### 代码格式化和检查
-
-```bash
-ruff format .
-ruff check .
-```
-
-#### 类型检查
-
-```bash
-pyright
-```
-
-#### 运行测试
-
-```bash
-pytest
-```
-
-
-
-
 
 ## 📝 注意事项
 

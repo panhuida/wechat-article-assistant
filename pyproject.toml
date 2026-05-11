@@ -57,7 +57,7 @@ include = [
 [dependency-groups]
 dev = [
     "ruff>=0.1.0",
-    "pyright>=1.1.0",
+    "ty>=0.0.34",
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "pytest-asyncio",
@@ -123,30 +123,13 @@ markers = [
     "manual: marks manual or environment-dependent tests",
 ]
 
-[tool.pyright]
+[tool.ty.environment]
+python-version = "3.12"
+python-platform = "all"
+
+[tool.ty.rules]
+invalid-assignment = "warn"
+invalid-argument-type = "warn"
+
+[tool.ty.src]
 include = ["src"]
-exclude = [
-    "**/__pycache__",
-    "**/.pytest_cache",
-    "**/node_modules",
-    "build",
-    "dist",
-    ".venv",
-    "venv",
-]
-stubPath = "typings"
-reportMissingImports = true
-reportMissingTypeStubs = false
-pythonVersion = "3.12"
-pythonPlatform = "All"
-typeCheckingMode = "basic"
-reportUnusedImport = "warning"
-reportUnusedClass = "warning"
-reportUnusedFunction = "warning"
-reportUnusedVariable = "warning"
-reportDuplicateImport = "warning"
-reportUndefinedVariable = "error"
-reportUnboundVariable = "error"
-reportOptionalMemberAccess = "warning"
-reportOptionalSubscript = "warning"
-reportPrivateUsage = "warning"
