@@ -4,11 +4,25 @@ from unittest.mock import Mock, patch
 from wechat_article_assistant.browser.wechat_authenticator import WechatAuthenticator
 
 
+def test_noninteractive_auth_never_opens_browser() -> None:
+    """缺少会话时非交互认证立即返回，不等待扫码。"""
+    auth, _browser, session_manager = create_authenticator()
+    session_manager.is_session_valid.return_value = False
+    with patch.object(auth, "_do_browser_login") as login:
+        assert auth.ensure_authenticated(interactive=False) is False
+    login.assert_not_called()
+
+
 def create_authenticator():
     """创建可控的认证器实例"""
-    with patch("wechat_article_assistant.browser.wechat_authenticator.BrowserManager") as mock_browser, patch(
-        "wechat_article_assistant.browser.wechat_authenticator.SessionManager"
-    ) as mock_session:
+    with (
+        patch(
+            "wechat_article_assistant.browser.wechat_authenticator.BrowserManager"
+        ) as mock_browser,
+        patch(
+            "wechat_article_assistant.browser.wechat_authenticator.SessionManager"
+        ) as mock_session,
+    ):
         auth = WechatAuthenticator()
     return auth, mock_browser.return_value, mock_session.return_value
 
@@ -18,9 +32,10 @@ def test_ensure_authenticated_uses_existing_valid_session():
     auth, _browser, session_manager = create_authenticator()
     session_manager.is_session_valid.return_value = True
 
-    with patch.object(auth, "_verify_session", return_value=True) as mock_verify, patch.object(
-        auth, "_do_browser_login", return_value=False
-    ) as mock_login:
+    with (
+        patch.object(auth, "_verify_session", return_value=True) as mock_verify,
+        patch.object(auth, "_do_browser_login", return_value=False) as mock_login,
+    ):
         result = auth.ensure_authenticated()
 
     assert result is True
@@ -96,14 +111,18 @@ def test_capture_qrcode_from_page_returns_base64_data_url():
     qrcode_element = Mock()
     qrcode_element.screenshot.return_value = b"png-bytes"
     page = Mock()
-    page.query_selector.side_effect = lambda selector: qrcode_element if "img.qrcode_login_img" in selector else None
+    page.query_selector.side_effect = (
+        lambda selector: qrcode_element if "img.qrcode_login_img" in selector else None
+    )
 
     with patch("wechat_article_assistant.browser.wechat_authenticator.time.sleep"):
         result = auth._capture_qrcode_from_page(page)
 
     assert result["success"] is True
     assert result["status"] == "waiting"
-    assert result["qrcodeUrl"] == "data:image/png;base64," + base64.b64encode(b"png-bytes").decode("utf-8")
+    assert result["qrcodeUrl"] == "data:image/png;base64," + base64.b64encode(b"png-bytes").decode(
+        "utf-8"
+    )
 
 
 def test_poll_login_status_returns_success_when_session_exists():
@@ -170,11 +189,14 @@ def test_start_qrcode_login_returns_qrcode_after_thread_updates_state():
     def fake_sleep(_seconds: float) -> None:
         auth._login_qrcode = "data:image/png;base64,new"
 
-    with patch(
-        "wechat_article_assistant.browser.wechat_authenticator.threading.Thread"
-    ) as mock_thread, patch(
-        "wechat_article_assistant.browser.wechat_authenticator.time.sleep",
-        side_effect=fake_sleep,
+    with (
+        patch(
+            "wechat_article_assistant.browser.wechat_authenticator.threading.Thread"
+        ) as mock_thread,
+        patch(
+            "wechat_article_assistant.browser.wechat_authenticator.time.sleep",
+            side_effect=fake_sleep,
+        ),
     ):
         result = auth.start_qrcode_login()
 
@@ -196,11 +218,12 @@ def test_start_qrcode_login_returns_error_status_from_worker():
     def fake_sleep(_seconds: float) -> None:
         auth._login_status = {"success": False, "status": "error", "message": "二维码加载失败"}
 
-    with patch(
-        "wechat_article_assistant.browser.wechat_authenticator.threading.Thread"
-    ), patch(
-        "wechat_article_assistant.browser.wechat_authenticator.time.sleep",
-        side_effect=fake_sleep,
+    with (
+        patch("wechat_article_assistant.browser.wechat_authenticator.threading.Thread"),
+        patch(
+            "wechat_article_assistant.browser.wechat_authenticator.time.sleep",
+            side_effect=fake_sleep,
+        ),
     ):
         result = auth.start_qrcode_login()
 
@@ -212,9 +235,10 @@ def test_start_qrcode_login_returns_timeout_when_qrcode_never_arrives():
     auth, _browser, session_manager = create_authenticator()
     session_manager.is_session_valid.return_value = False
 
-    with patch(
-        "wechat_article_assistant.browser.wechat_authenticator.threading.Thread"
-    ), patch("wechat_article_assistant.browser.wechat_authenticator.time.sleep"):
+    with (
+        patch("wechat_article_assistant.browser.wechat_authenticator.threading.Thread"),
+        patch("wechat_article_assistant.browser.wechat_authenticator.time.sleep"),
+    ):
         result = auth.start_qrcode_login()
 
     assert result == {"success": False, "message": "获取二维码超时"}

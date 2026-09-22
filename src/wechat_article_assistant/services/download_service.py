@@ -3,6 +3,7 @@
 import html
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urljoin
@@ -21,6 +22,29 @@ from ..utils.logger import get_module_logger
 __all__ = ["DownloadService"]
 
 logger = get_module_logger(__name__)
+
+
+@dataclass
+class DownloadResult:
+    """单篇下载结果；路径仅在文件成功写入后返回。"""
+
+    url: str
+    title: str
+    success: bool
+    message: str
+    path: str | None = None
+    error_code: str | None = None
+    article_id: int | None = None
+
+
+@dataclass
+class DownloadRequest:
+    """下载任务的明确输入。"""
+
+    url: str
+    title: str
+    account_name: str = "未分类"
+    article_id: int | None = None
 
 
 class DownloadService:
@@ -98,6 +122,7 @@ class DownloadService:
 
     def _decode_js_escaped_text(self, value: str) -> str:
         """解码微信页面源码中的 JsDecode 文本"""
+
         def hex_replace(match: re.Match[str]) -> str:
             return chr(int(match.group(1), 16))
 
@@ -1038,6 +1063,56 @@ class DownloadService:
         save_dir: Path | None = None,
         output_format: str = "html",
     ) -> tuple[bool, str]:
+        """兼容原有下载接口，详细结果由统一实现产生。"""
+        result = self.download_article_result(
+            article_url, article_title, account_name, save_dir, output_format
+        )
+        return result.success, result.message
+
+    def download_requests(
+        self,
+        requests: list[DownloadRequest],
+        save_dir: Path | None = None,
+        output_format: str = "markdown",
+    ) -> list[DownloadResult]:
+        """按任务顺序下载并保留逐篇结果，便于失败重试和状态更新。"""
+        results = []
+        for request in requests:
+            result = self.download_article_result(
+                request.url, request.title, request.account_name, save_dir, output_format
+            )
+            result.article_id = request.article_id
+            results.append(result)
+        return results
+
+    def download_file_results(
+        self, file_path: Path, save_dir: Path | None = None, output_format: str = "markdown"
+    ) -> list[DownloadResult]:
+        """读取 UTF-8 链接文件，空文件和读取失败由 CLI 转换为可读错误。"""
+        urls = [
+            line.strip()
+            for line in file_path.read_text(encoding="utf-8-sig").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        if not urls:
+            raise ValueError("文件中没有找到有效的URL")
+        return self.download_requests(
+            [
+                DownloadRequest(url, f"文章_{index}", "批量下载")
+                for index, url in enumerate(urls, 1)
+            ],
+            save_dir,
+            output_format,
+        )
+
+    def download_article_result(
+        self,
+        article_url: str,
+        article_title: str,
+        account_name: str = "未分类",
+        save_dir: Path | None = None,
+        output_format: str = "html",
+    ) -> DownloadResult:
         """
         下载单篇文章（包含HTML、图片、CSS等资源）
 
@@ -1049,7 +1124,7 @@ class DownloadService:
             output_format: 保存格式（html 或 markdown）
 
         Returns:
-            (是否成功, 消息)
+            包含状态、实际标题、文件绝对路径的下载结果
         """
         try:
             logger.info(f"开始下载文章: {article_title}")
@@ -1061,7 +1136,13 @@ class DownloadService:
             response, blocked_by_verification = self._fetch_article_response(article_url, headers)
             if blocked_by_verification:
                 logger.error("文章下载失败: 命中微信环境验证页，无法获取正文")
-                return False, "下载文章失败: 命中微信环境验证页，请先完成登录验证后重试"
+                return DownloadResult(
+                    article_url,
+                    article_title,
+                    False,
+                    "命中微信环境验证页，请先完成登录验证后重试",
+                    error_code="verification_required",
+                )
 
             # 使用 response.content 让 BeautifulSoup 自行处理编码
             soup = BeautifulSoup(response.content, "lxml")
@@ -1157,7 +1238,13 @@ class DownloadService:
 
             # 创建文章和图片文件夹
             if output_format not in {"html", "markdown"}:
-                return False, f"不支持的保存格式: {output_format}"
+                return DownloadResult(
+                    article_url,
+                    article_title,
+                    False,
+                    f"不支持的保存格式: {output_format}",
+                    error_code="invalid_format",
+                )
 
             base_filename = sanitize_filename(article_title, max_length=max_filename_length)
             file_ext = "html" if output_format == "html" else "md"
@@ -1262,12 +1349,20 @@ class DownloadService:
                 json.dump(meta_data, f, ensure_ascii=False, indent=4)
 
             logger.info(f"文章下载成功: {article_path}")
-            return True, f"下载成功，保存至: {article_path}"
+            return DownloadResult(
+                article_url,
+                article_title,
+                True,
+                f"下载成功，保存至: {article_path}",
+                path=str(article_path.resolve()),
+            )
 
         except Exception as e:
             error_msg = f"下载文章失败: {e}"
             logger.error(error_msg, exc_info=True)
-            return False, error_msg
+            return DownloadResult(
+                article_url, article_title, False, error_msg, error_code="download_failed"
+            )
 
     def download_articles_batch(
         self,

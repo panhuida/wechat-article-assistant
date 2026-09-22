@@ -6,6 +6,50 @@ from bs4 import BeautifulSoup
 from wechat_article_assistant.services.download_service import DownloadService
 
 
+def test_download_result_reports_real_file(tmp_path: Path) -> None:
+    """结构化接口返回实际落盘路径，不能靠解析日志获得。"""
+    service = DownloadService()
+    html = '<html><head><title>实际标题</title></head><body><div id="js_content"><p>正文</p></div></body></html>'
+    with patch.object(
+        service, "_fetch_article_response", return_value=(_make_response(html), False)
+    ):
+        result = service.download_article_result(
+            "https://example.com", "旧标题", save_dir=tmp_path, output_format="markdown"
+        )
+    assert result.success
+    assert result.title == "实际标题"
+    assert result.path is not None
+    assert Path(result.path).is_absolute()
+    assert "正文" in Path(result.path).read_text(encoding="utf-8")
+
+
+def test_download_result_verification_has_no_path() -> None:
+    """验证拦截不能产生成功路径。"""
+    service = DownloadService()
+    with patch.object(
+        service, "_fetch_article_response", return_value=(_make_response("验证"), True)
+    ):
+        result = service.download_article_result("https://example.com", "标题")
+    assert result.error_code == "verification_required"
+    assert result.path is None
+    assert not result.success
+
+
+def test_download_file_results_utf8_bom(tmp_path: Path) -> None:
+    """链接文件支持 Windows UTF-8 BOM，并忽略注释。"""
+    path = tmp_path / "urls.txt"
+    path.write_text(
+        "# 注释\n\nhttps://example.com/a\nhttps://example.com/b\n", encoding="utf-8-sig"
+    )
+    service = DownloadService()
+    with patch.object(service, "download_requests", return_value=[]) as download:
+        service.download_file_results(path, tmp_path)
+    assert [item.url for item in download.call_args.args[0]] == [
+        "https://example.com/a",
+        "https://example.com/b",
+    ]
+
+
 def _make_response(html: str, content_type: str = "text/html; charset=utf-8") -> Mock:
     response = Mock()
     response.text = html
@@ -42,10 +86,13 @@ def test_fetch_article_response_retries_with_session_when_verification_page():
     first = _make_response("<html><body>环境异常</body></html>")
     second = _make_response("<html><body><div id='js_content'><p>正文</p></div></body></html>")
 
-    with patch.object(service, "_load_session_cookies", return_value={"pass_ticket": "cookie"}), patch(
-        "wechat_article_assistant.services.download_service.requests.get",
-        side_effect=[first, second],
-    ) as mock_get:
+    with (
+        patch.object(service, "_load_session_cookies", return_value={"pass_ticket": "cookie"}),
+        patch(
+            "wechat_article_assistant.services.download_service.requests.get",
+            side_effect=[first, second],
+        ) as mock_get,
+    ):
         response, blocked = service._fetch_article_response("https://mp.weixin.qq.com/s/test", {})
 
     assert response is second
@@ -241,10 +288,15 @@ def test_download_article_markdown_saves_markdown_and_meta(tmp_path: Path):
     </html>
     """
 
-    with patch.object(service, "_fetch_article_response", return_value=(_make_response(html), False)), patch.object(
-        service,
-        "_download_and_replace_image",
-        return_value="页面标题.assets/image_0.png",
+    with (
+        patch.object(
+            service, "_fetch_article_response", return_value=(_make_response(html), False)
+        ),
+        patch.object(
+            service,
+            "_download_and_replace_image",
+            return_value="页面标题.assets/image_0.png",
+        ),
     ):
         success, message = service.download_article(
             article_url="https://mp.weixin.qq.com/s/markdown",
@@ -307,7 +359,9 @@ def test_download_from_file_ignores_comments_and_blank_lines(tmp_path: Path):
         "download_articles_batch",
         return_value=(2, 0, []),
     ) as mock_batch:
-        result = service.download_from_file(str(file_path), save_dir=tmp_path, output_format="markdown")
+        result = service.download_from_file(
+            str(file_path), save_dir=tmp_path, output_format="markdown"
+        )
 
     articles = mock_batch.call_args.args[0]
     assert result == (2, 0, [])

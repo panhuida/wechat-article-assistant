@@ -36,7 +36,7 @@ class WechatAuthenticator:
         self._login_thread: threading.Thread | None = None
         self._login_cancel_event = threading.Event()
 
-    def ensure_authenticated(self) -> bool:
+    def ensure_authenticated(self, interactive: bool = True) -> bool:
         """
         确保已认证（自动处理会话复用和登录）
 
@@ -63,6 +63,9 @@ class WechatAuthenticator:
             logger.warning("会话验证失败，需要重新登录")
         else:
             logger.info("未找到有效会话，需要登录")
+
+        if not interactive:
+            return False
 
         # 3. 启动浏览器登录
         return self._do_browser_login()

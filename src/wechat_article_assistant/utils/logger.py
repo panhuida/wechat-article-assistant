@@ -90,7 +90,7 @@ def get_module_logger(module_name: str, write_to_file: bool = True) -> logging.L
     )
 
     # 控制台处理器
-    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setLevel(log_level)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
@@ -114,7 +114,7 @@ def setup_werkzeug_logger():
     # 使用统一格式
     formatter = RelativePathFormatter("%(asctime)s %(levelname)-8s %(name)s:%(lineno)d %(message)s")
 
-    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setFormatter(formatter)
     werkzeug_logger.addHandler(console_handler)
 
@@ -153,7 +153,7 @@ def setup_logger(
 
     # 控制台处理器
     if enable_console:
-        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setLevel(log_level)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)

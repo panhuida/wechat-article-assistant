@@ -44,6 +44,8 @@
 
 ## 📋 系统要求
 
+在 Codex 中通过用户级命令和 Skill 使用，见 [Codex CLI 接入说明](docs/参考文档/Codex-CLI接入.md)。
+
 - Python 3.12 或更高版本
 - 支持的操作系统：Windows、macOS、Linux
 
@@ -366,7 +368,7 @@ uv run pytest -m "not slow"
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
+本项目声明采用 MIT 许可证（见 `pyproject.toml` 中的许可证元数据）。
 
 
 

@@ -4,6 +4,7 @@ import json
 import random
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, cast
 
 import requests
@@ -14,6 +15,7 @@ from ..browser.wechat_authenticator import WechatAuthenticator
 from ..config import config
 from ..models import WechatAccount, WechatArticle, get_db
 from ..utils.logger import get_module_logger
+from .download_service import DownloadRequest, DownloadResult, DownloadService
 
 __all__ = ["ArticleService"]
 
@@ -26,6 +28,37 @@ class ArticleService:
     def __init__(self):
         """初始化文章服务"""
         self.wechat_auth = WechatAuthenticator()
+
+    def download_collected_articles(
+        self,
+        start: datetime,
+        end: datetime,
+        nicknames: list[str],
+        output: Path | None = None,
+        output_format: str = "markdown",
+    ) -> list[DownloadResult]:
+        """下载指定范围的已采集文章，只标记实际成功的记录。"""
+        articles = self.get_articles_by_create_time_range(
+            start, end, nicknames=nicknames, strict=True
+        )
+        requests = [
+            DownloadRequest(
+                article["article_link"],
+                article["article_title"],
+                article.get("nickname") or "未分类",
+                article["id"],
+            )
+            for article in articles
+        ]
+        results = DownloadService().download_requests(requests, output, output_format)
+        ids = [
+            result.article_id
+            for result in results
+            if result.success and result.article_id is not None
+        ]
+        if ids:
+            self.mark_as_downloaded(ids)
+        return results
 
     def get_articles(
         self,
@@ -417,7 +450,9 @@ class ArticleService:
 
         return count
 
-    def collect_recent_articles_all_accounts(self) -> tuple[bool, str, dict[str, Any]]:
+    def collect_recent_articles_all_accounts(
+        self, interactive: bool = True
+    ) -> tuple[bool, str, dict[str, Any]]:
         """
         获取所有公众号最近5次发的文章
 
@@ -428,8 +463,12 @@ class ArticleService:
             logger.info("开始获取所有公众号最近5次发的文章")
 
             # 确保已认证（自动处理会话复用和登录）
-            if not self.wechat_auth.ensure_authenticated():
-                return False, "认证失败，请重试", {}
+            if not self.wechat_auth.ensure_authenticated(interactive=interactive):
+                return (
+                    False,
+                    "需要登录，请先在 Web 页面完成登录或运行 wechat-cli login",
+                    {"error_code": "login_required"},
+                )
 
             # 加载会话
             session_data = self.wechat_auth.get_session_data()
@@ -609,6 +648,7 @@ class ArticleService:
         end_time: datetime,
         nickname: str | None = None,
         nicknames: list[str] | None = None,
+        strict: bool = False,
     ) -> list[dict[str, Any]]:
         """
         按文章创建时间范围获取文章列表
@@ -624,12 +664,9 @@ class ArticleService:
         """
         try:
             with get_db() as db:
-                query = (
-                    db.query(WechatArticle)
-                    .filter(
-                        WechatArticle.article_create_time >= start_time,
-                        WechatArticle.article_create_time <= end_time,
-                    )
+                query = db.query(WechatArticle).filter(
+                    WechatArticle.article_create_time >= start_time,
+                    WechatArticle.article_create_time <= end_time,
                 )
                 if nicknames:
                     query = query.filter(WechatArticle.nickname.in_(nicknames))
@@ -640,4 +677,6 @@ class ArticleService:
                 return [article.to_dict() for article in articles]
         except Exception as e:
             logger.error(f"按时间范围获取文章失败: {e}")
+            if strict:
+                raise RuntimeError("查询已采集文章失败，请检查数据库配置和初始化状态") from e
             return []

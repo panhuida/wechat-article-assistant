@@ -1,208 +1,91 @@
-"""命令行工具"""
+"""命令行参数解析及人类可读、JSON 响应。"""
 
 import argparse
+import json
 import sys
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import NoReturn
 
+from .browser.wechat_authenticator import WechatAuthenticator
 from .config import config
 from .services.article_service import ArticleService
-from .services.download_service import DownloadService
+from .services.download_service import DownloadResult, DownloadService
 from .utils.logger import cli_logger
 
-__all__ = ["main"]
+
+@dataclass
+class CommandResult:
+    """CLI 的稳定输出结构，schema_version 用于后续兼容。"""
+
+    command: str
+    status: str = "success"
+    exit_code: int = 0
+    message: str = "完成"
+    success_count: int = 0
+    failure_count: int = 0
+    items: list[DownloadResult] = field(default_factory=list)
+    details: dict[str, object] = field(default_factory=dict)
+    schema_version: int = 1
 
 
-def main():
-    """命令行工具主函数"""
-    parser = argparse.ArgumentParser(description="微信公众号文章阅读助手")
+class CliParser(argparse.ArgumentParser):
+    """让参数错误也能按 JSON 协议返回。"""
 
-    subparsers = parser.add_subparsers(dest="command", help="命令")
+    def error(self, message: str) -> NoReturn:
+        """由入口统一组织参数错误响应。"""
+        raise ValueError(message)
 
-    # 下载命令
-    download_parser = subparsers.add_parser("download", help="下载文章")
-    download_parser.add_argument("url", nargs="?", help="文章URL")
-    download_parser.add_argument("--file", "-f", help="包含文章链接的文件路径")
-    download_parser.add_argument("--output", "-o", help="输出目录", default=None)
-    download_parser.add_argument(
-        "--format",
-        dest="save_format",
-        choices=["html", "markdown"],
-        default="markdown",
-        help="保存格式，默认 markdown",
+
+def build_parser() -> argparse.ArgumentParser:
+    """构造兼容原命令的参数定义。"""
+    common = CliParser(add_help=False)
+    common.add_argument(
+        "--json", action="store_true", default=argparse.SUPPRESS, help="输出单个 JSON 对象"
     )
-    download_parser.add_argument("--verbose", "-v", action="store_true", help="显示详细日志")
-
-    # 采集最近文章命令
-    collect_recent_parser = subparsers.add_parser(
-        "collect-recent", help="获取所有公众号最近5次发的文章"
+    parser = CliParser(description="微信公众号文章阅读助手", parents=[common])
+    subparsers = parser.add_subparsers(dest="command")
+    download = subparsers.add_parser("download", parents=[common], help="按链接下载文章")
+    download.add_argument("url", nargs="?", help="文章 URL")
+    download.add_argument("--file", "-f", help="UTF-8 链接文件")
+    collected = subparsers.add_parser(
+        "download-articles", parents=[common], help="下载已采集的文章"
     )
-    collect_recent_parser.add_argument("--verbose", "-v", action="store_true", help="显示失败详情")
-
-    # 按时间范围下载已采集文章命令
-    download_articles_parser = subparsers.add_parser(
-        "download-articles", help="按文章创建时间范围批量下载文章"
-    )
-    download_articles_parser.add_argument(
-        "--start-time",
-        help="开始时间，支持 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS，默认最近一天",
-        default=None,
-    )
-    download_articles_parser.add_argument(
-        "--end-time",
-        help="结束时间，支持 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS，默认当前时间",
-        default=None,
-    )
-    download_articles_parser.add_argument(
-        "--format",
-        dest="save_format",
-        choices=["html", "markdown"],
-        default="markdown",
-        help="保存格式，默认 markdown",
-    )
-    download_articles_parser.add_argument(
-        "--nickname",
-        help="按公众号名称筛选，支持逗号分隔多个名称（精确匹配）",
-        default=None,
-    )
-    download_articles_parser.add_argument(
-        "--output",
-        "-o",
-        help="保存目录，默认使用 .env 中的 DOWNLOAD_PATH / DOWNLOAD_DIR",
-        default=None,
-    )
-    download_articles_parser.add_argument("--verbose", "-v", action="store_true", help="显示失败详情")
-
-    args = parser.parse_args()
-    cli_logger.info(f"CLI 启动，命令: {args.command}")
-
-    if args.command == "download":
-        download_command(args)
-    elif args.command == "collect-recent":
-        collect_recent_command(args)
-    elif args.command == "download-articles":
-        download_articles_command(args)
-    else:
-        parser.print_help()
-
-
-def download_command(args: argparse.Namespace) -> None:
-    """下载命令处理"""
-    download_service = DownloadService()
-    cli_logger.info("执行 download 命令")
-
-    # 设置输出目录
-    output_dir = Path(args.output) if args.output else None
-
-    if args.file:
-        cli_logger.info(f"从文件批量下载，file={args.file}, output={args.output}")
-        # 从文件批量下载
-        cli_logger.info("=" * 60)
-        cli_logger.info(f"从文件读取URL: {args.file}")
-        cli_logger.info("=" * 60)
-
-        success_count, fail_count, errors = download_service.download_from_file(
-            args.file, output_dir, output_format=args.save_format
+    collected.add_argument("--start-time", help="开始时间，默认最近一天")
+    collected.add_argument("--end-time", help="结束时间，默认当前时间")
+    collected.add_argument("--nickname", help="公众号名称，逗号分隔，精确匹配")
+    for command in (download, collected):
+        command.add_argument("--output", "-o", help="输出目录")
+        command.add_argument(
+            "--format", dest="save_format", choices=["html", "markdown"], default="markdown"
         )
-        cli_logger.info(f"批量下载完成，success={success_count}, fail={fail_count}")
-
-        cli_logger.info("=" * 60)
-        cli_logger.info("下载完成!")
-        cli_logger.info("=" * 60)
-        cli_logger.info(f"成功: {success_count} 篇")
-        cli_logger.info(f"失败: {fail_count} 篇")
-
-        if errors and args.verbose:
-            cli_logger.info("错误详情:")
-            for error in errors:
-                cli_logger.error(f"  ✗ {error}")
-
-        cli_logger.info("=" * 60)
-
-    elif args.url:
-        cli_logger.info(f"下载单篇文章，url={args.url}, output={args.output}")
-        # 下载单个URL
-        cli_logger.info("=" * 60)
-        cli_logger.info(f"下载文章: {args.url}")
-        cli_logger.info("=" * 60)
-
-        success, message = download_service.download_article(
-            args.url,
-            "命令行下载",
-            "命令行下载",
-            output_dir,
-            output_format=args.save_format,
-        )
-        if success:
-            cli_logger.info(f"单篇下载成功: {message}")
-        else:
-            cli_logger.error(f"单篇下载失败: {message}")
-
-        cli_logger.info("=" * 60)
-        if success:
-            cli_logger.info(f"✓ {message}")
-        else:
-            cli_logger.error(f"✗ {message}")
-        cli_logger.info("=" * 60)
-
-    else:
-        cli_logger.error("download 命令缺少 url 或 file 参数")
-        cli_logger.error("错误: 请指定文章URL或文件路径")
-        cli_logger.info("示例:")
-        cli_logger.info("  # 下载单篇文章")
-        cli_logger.info("  wechat-cli download <article_url>")
-        cli_logger.info("  python wechat-cli.py download <article_url>")
-        cli_logger.info("  # 批量下载")
-        cli_logger.info("  wechat-cli download --file urls.txt")
-        cli_logger.info("  python wechat-cli.py download --file urls.txt")
-        cli_logger.info("  # 指定输出目录")
-        cli_logger.info("  wechat-cli download <article_url> --output E:\\我的文档\\公众号")
-        cli_logger.info("  # 显示详细日志")
-        cli_logger.info("  wechat-cli download <article_url> --verbose")
-        sys.exit(1)
-
-
-def collect_recent_command(args: argparse.Namespace) -> None:
-    """获取所有公众号最近5次发的文章"""
-    article_service = ArticleService()
-    cli_logger.info("执行 collect-recent 命令")
-
-    cli_logger.info("=" * 60)
-    cli_logger.info("开始采集所有公众号最近5次发的文章...")
-    cli_logger.info("=" * 60)
-
-    success, message, stats = article_service.collect_recent_articles_all_accounts()
-    cli_logger.info(
-        "采集最近文章完成，success=%s, total_accounts=%s, success_accounts=%s, failed_accounts=%s, total_articles=%s",
-        success,
-        stats.get("total_accounts") if stats else None,
-        stats.get("success_accounts") if stats else None,
-        stats.get("failed_accounts") if stats else None,
-        stats.get("total_articles") if stats else None,
+        command.add_argument("--verbose", "-v", action="store_true", help="显示逐篇结果")
+    collect = subparsers.add_parser(
+        "collect-recent", parents=[common], help="采集所有已配置公众号最近 5 次群发"
     )
+    collect.add_argument("--verbose", "-v", action="store_true")
+    collect.add_argument(
+        "--interactive", action="store_true", help="允许打开浏览器扫码；默认仅复用现有登录态"
+    )
+    subparsers.add_parser("login", parents=[common], help="验证登录态，必要时打开浏览器扫码")
+    subparsers.add_parser("doctor", parents=[common], help="检查本地路径，不发起网络请求")
+    return parser
 
-    cli_logger.info("=" * 60)
-    if success:
-        cli_logger.info(f"✓ {message}")
-    else:
-        cli_logger.error(f"✗ {message}")
 
-    if stats:
-        cli_logger.info("-" * 60)
-        cli_logger.info(f"公众号总数: {stats.get('total_accounts', 0)}")
-        cli_logger.info(f"成功采集: {stats.get('success_accounts', 0)}")
-        cli_logger.info(f"失败采集: {stats.get('failed_accounts', 0)}")
-        cli_logger.info(f"新增文章: {stats.get('total_articles', 0)}")
-
-        failed_list = stats.get("failed_list", [])
-        if failed_list and args.verbose:
-            cli_logger.info("失败详情:")
-            for failed_item in failed_list:
-                cli_logger.error(f"  ✗ {failed_item}")
-    cli_logger.info("=" * 60)
-
-    if not success:
-        sys.exit(1)
+def download_response(command: str, items: list[DownloadResult]) -> CommandResult:
+    """根据逐篇结果确定退出码，部分失败不能冒充全部成功。"""
+    success = sum(item.success for item in items)
+    failed = len(items) - success
+    code = 0
+    status = "success"
+    if failed:
+        code, status = (3, "partial_failure") if success else (1, "failed")
+        if not success and all(item.error_code == "verification_required" for item in items):
+            code, status = 5, "verification_required"
+    return CommandResult(
+        command, status, code, f"成功 {success} 篇，失败 {failed} 篇", success, failed, items
+    )
 
 
 def _parse_cli_datetime(value: str, is_end: bool = False) -> datetime:
@@ -235,98 +118,106 @@ def _parse_cli_datetime(value: str, is_end: bool = False) -> datetime:
         raise ValueError(f"无法解析时间: {value}") from e
 
 
-def download_articles_command(args: argparse.Namespace) -> None:
-    """按时间范围批量下载已采集文章"""
-    article_service = ArticleService()
-    download_service = DownloadService()
-    cli_logger.info("执行 download-articles 命令")
-
-    now = datetime.now()
-    default_start = now - timedelta(days=1)
-    start_time = default_start
-    end_time = now
-
-    try:
-        if args.start_time:
-            start_time = _parse_cli_datetime(args.start_time, is_end=False)
-        if args.end_time:
-            end_time = _parse_cli_datetime(args.end_time, is_end=True)
-    except ValueError as e:
-        cli_logger.error(f"download-articles 时间参数解析失败: {e}")
-        cli_logger.error(f"错误: {e}")
-        cli_logger.info("示例:")
-        cli_logger.info("  wechat-cli download-articles --start-time 2026-03-05 --end-time 2026-03-06")
-        cli_logger.info(
-            "  wechat-cli download-articles --start-time '2026-03-05 00:00:00' --format markdown"
+def execute_command(args: argparse.Namespace) -> CommandResult:
+    """将已解析参数交给服务并组织响应。"""
+    if args.command == "doctor":
+        return CommandResult(
+            "doctor",
+            details={
+                "home": str(config.APP_HOME),
+                "config_file": str(config.APP_HOME / ".env"),
+                "config_exists": (config.APP_HOME / ".env").is_file(),
+                "download_dir": str(config.DOWNLOAD_DIR),
+                "session_file": str(config.SESSION_FILE),
+                "session_exists": config.SESSION_FILE.is_file(),
+                "session_verified": False,
+            },
+            message="本地路径检查完成；会话是否有效需在线验证",
         )
-        sys.exit(1)
-
-    if start_time > end_time:
-        cli_logger.error("download-articles 参数错误：start_time > end_time")
-        cli_logger.error("错误: 开始时间不能晚于结束时间")
-        sys.exit(1)
-
-    output_dir = Path(args.output) if args.output else None
-    nicknames = (
-        [item.strip() for item in args.nickname.split(",") if item.strip()] if args.nickname else []
+    if args.command == "login":
+        success = WechatAuthenticator().ensure_authenticated()
+        return CommandResult(
+            "login",
+            "success" if success else "login_required",
+            0 if success else 4,
+            "登录成功" if success else "登录未完成，请重试扫码登录",
+        )
+    if args.command == "collect-recent":
+        success, message, stats = ArticleService().collect_recent_articles_all_accounts(
+            interactive=args.interactive
+        )
+        failed = int(stats.get("failed_accounts", 0))
+        code = 3 if success and failed else (0 if success else 1)
+        status = "partial_failure" if code == 3 else ("success" if success else "failed")
+        if stats.get("error_code") == "login_required":
+            code, status = 4, "login_required"
+        return CommandResult(
+            args.command,
+            status,
+            code,
+            message,
+            success_count=int(stats.get("success_accounts", 0)),
+            failure_count=failed,
+            details=stats,
+        )
+    output = Path(args.output).expanduser().resolve() if args.output else None
+    if args.command == "download":
+        if bool(args.url) == bool(args.file):
+            raise ValueError("请指定文章 URL 或 --file，且只能选择一种")
+        service = DownloadService()
+        if args.file:
+            items = service.download_file_results(Path(args.file), output, args.save_format)
+        else:
+            items = [
+                service.download_article_result(
+                    args.url, "命令行下载", "命令行下载", output, args.save_format
+                )
+            ]
+        return download_response(args.command, items)
+    now = datetime.now()
+    start = _parse_cli_datetime(args.start_time) if args.start_time else now - timedelta(days=1)
+    end = _parse_cli_datetime(args.end_time, is_end=True) if args.end_time else now
+    if start > end:
+        raise ValueError("开始时间不能晚于结束时间")
+    nicknames = [name.strip() for name in (args.nickname or "").split(",") if name.strip()]
+    items = ArticleService().download_collected_articles(
+        start, end, nicknames, output, args.save_format
     )
-    nickname_display = ",".join(nicknames) if nicknames else "全部"
+    result = download_response(args.command, items)
+    if not items:
+        result.message = "未找到符合条件的已采集文章"
+    return result
 
-    cli_logger.info("=" * 60)
-    cli_logger.info("按时间范围批量下载文章")
-    cli_logger.info(
-        f"时间范围: {start_time.strftime('%Y-%m-%d %H:%M:%S')} ~ {end_time.strftime('%Y-%m-%d %H:%M:%S')}"
-    )
-    cli_logger.info(f"公众号名称: {nickname_display}")
-    cli_logger.info(f"保存格式: {args.save_format}")
-    cli_logger.info(f"保存路径: {output_dir if output_dir else config.DOWNLOAD_DIR}")
-    cli_logger.info("=" * 60)
-    cli_logger.info(
-        "下载筛选条件：start=%s, end=%s, nicknames=%s, format=%s, output=%s",
-        start_time.strftime("%Y-%m-%d %H:%M:%S"),
-        end_time.strftime("%Y-%m-%d %H:%M:%S"),
-        nicknames if nicknames else "全部",
-        args.save_format,
-        str(output_dir if output_dir else config.DOWNLOAD_DIR),
-    )
 
-    articles = article_service.get_articles_by_create_time_range(
-        start_time, end_time, nicknames=nicknames
-    )
-    if not articles:
-        cli_logger.info("无匹配文章")
-        cli_logger.info("未找到符合条件的文章。")
-        return
-
-    success_count, fail_count, errors = download_service.download_articles_batch(
-        articles, output_dir, output_format=args.save_format
-    )
-    cli_logger.info(
-        "批量下载执行完成，matched=%s, success=%s, fail=%s",
-        len(articles),
-        success_count,
-        fail_count,
-    )
-
-    if success_count > 0:
-        article_ids = [article["id"] for article in articles if isinstance(article.get("id"), int)]
-        if article_ids:
-            article_service.mark_as_downloaded(article_ids)
-
-    cli_logger.info("=" * 60)
-    cli_logger.info(f"匹配文章: {len(articles)} 篇")
-    cli_logger.info(f"下载成功: {success_count} 篇")
-    cli_logger.info(f"下载失败: {fail_count} 篇")
-    cli_logger.info("=" * 60)
-
-    if errors and args.verbose:
-        cli_logger.info("失败详情:")
-        for error in errors:
-            cli_logger.error(f"  ✗ {error}")
-
-    if fail_count > 0 and success_count == 0:
-        cli_logger.error("批量下载全部失败")
-        sys.exit(1)
+def main() -> None:
+    """执行命令；stdout 专用于 JSON，日志和人类可读结果写入 stderr。"""
+    parser = build_parser()
+    json_output = "--json" in sys.argv[1:]
+    command = "unknown"
+    try:
+        args = parser.parse_args()
+        command = args.command or "help"
+        if not args.command:
+            if json_output:
+                raise ValueError("请指定子命令；使用 --help 查看帮助")
+            parser.print_help()
+            return
+        result = execute_command(args)
+    except ValueError as exc:
+        result = CommandResult(command, "invalid_arguments", 2, str(exc))
+    except Exception as exc:
+        cli_logger.exception("命令执行失败")
+        result = CommandResult(command, "failed", 1, f"执行失败: {exc}")
+    if json_output:
+        sys.stdout.write(json.dumps(asdict(result), ensure_ascii=False) + "\n")
+    else:
+        cli_logger.info(result.message)
+        for item in result.items:
+            cli_logger.info("%s: %s", item.title, item.path if item.success else item.message)
+        if result.details:
+            cli_logger.info("%s", json.dumps(result.details, ensure_ascii=False))
+    if result.exit_code:
+        raise SystemExit(result.exit_code)
 
 
 if __name__ == "__main__":

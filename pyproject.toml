@@ -7,7 +7,7 @@ authors = [
     { name = "panhuida" }
 ]
 requires-python = ">=3.12"
-license = { file = "LICENSE" }
+license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -36,6 +36,7 @@ dependencies = [
 ]
 
 [project.scripts]
+wechat-cli = "wechat_article_assistant.cli:main"
 wechat-article-assistant = "wechat_article_assistant.cli:main"
 
 [build-system]
@@ -51,7 +52,6 @@ include = [
     "/run.py",
     "/wechat-cli.py",
     "/README.md",
-    "/LICENSE",
 ]
 
 [dependency-groups]

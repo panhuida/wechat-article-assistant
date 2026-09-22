@@ -4,6 +4,43 @@ from unittest.mock import Mock, patch
 
 from wechat_article_assistant.models import WechatAccount, WechatArticle
 from wechat_article_assistant.services.article_service import ArticleService
+from wechat_article_assistant.services.download_service import DownloadResult
+
+
+def test_download_collected_marks_only_successful_articles() -> None:
+    """部分下载失败时不能把失败文章标记为已下载。"""
+    service = ArticleService()
+    articles = [
+        {"id": 1, "article_link": "https://example.com/a", "article_title": "A", "nickname": "号"},
+        {"id": 2, "article_link": "https://example.com/b", "article_title": "B", "nickname": "号"},
+    ]
+    results = [
+        DownloadResult("a", "A", True, "完成", "/a.md", article_id=1),
+        DownloadResult("b", "B", False, "失败", article_id=2),
+    ]
+    with (
+        patch.object(service, "get_articles_by_create_time_range", return_value=articles),
+        patch("wechat_article_assistant.services.article_service.DownloadService") as downloads,
+        patch.object(service, "mark_as_downloaded", return_value=True) as mark,
+    ):
+        downloads.return_value.download_requests.return_value = results
+        assert (
+            service.download_collected_articles(datetime(2026, 9, 1), datetime(2026, 9, 2), [])
+            == results
+        )
+    mark.assert_called_once_with([1])
+
+
+def test_collect_without_session_reports_login_required() -> None:
+    """无人值守采集将登录缺失转换为明确的错误代码。"""
+    service = ArticleService()
+    with patch.object(
+        service.wechat_auth, "ensure_authenticated", return_value=False
+    ) as authenticate:
+        success, _message, stats = service.collect_recent_articles_all_accounts(interactive=False)
+    assert not success
+    assert stats["error_code"] == "login_required"
+    authenticate.assert_called_once_with(interactive=False)
 
 
 def test_article_service_get_articles(db):
@@ -156,8 +193,9 @@ def test_collect_articles_single_page_requires_session_data():
     """测试单页采集在缺少会话数据时返回失败"""
     service = ArticleService()
 
-    with patch.object(service.wechat_auth, "ensure_authenticated", return_value=True), patch.object(
-        service.wechat_auth, "get_session_data", return_value=None
+    with (
+        patch.object(service.wechat_auth, "ensure_authenticated", return_value=True),
+        patch.object(service.wechat_auth, "get_session_data", return_value=None),
     ):
         success, message, count = service.collect_articles_single_page(1)
 
@@ -283,17 +321,20 @@ def test_collect_articles_all_stops_when_page_returns_zero():
     """测试全部采集在无更多文章时结束"""
     service = ArticleService()
 
-    with patch.object(service.wechat_auth, "ensure_authenticated", return_value=True), patch.object(
-        service.wechat_auth,
-        "get_session_data",
-        return_value={"token": "token", "cookies": []},
-    ), patch.object(
-        service,
-        "_collect_single_page_with_session",
-        side_effect=[(True, "ok", 2), (True, "ok", 0)],
-    ) as mock_collect, patch(
-        "wechat_article_assistant.services.article_service.time.sleep"
-    ) as mock_sleep:
+    with (
+        patch.object(service.wechat_auth, "ensure_authenticated", return_value=True),
+        patch.object(
+            service.wechat_auth,
+            "get_session_data",
+            return_value={"token": "token", "cookies": []},
+        ),
+        patch.object(
+            service,
+            "_collect_single_page_with_session",
+            side_effect=[(True, "ok", 2), (True, "ok", 0)],
+        ) as mock_collect,
+        patch("wechat_article_assistant.services.article_service.time.sleep") as mock_sleep,
+    ):
         success, message, count = service.collect_articles_all(1)
 
     assert success is True
@@ -311,15 +352,19 @@ def test_collect_recent_articles_all_accounts_restores_account_settings(db):
     db.commit()
     db.refresh(account)
 
-    with patch.object(service.wechat_auth, "ensure_authenticated", return_value=True), patch.object(
-        service.wechat_auth,
-        "get_session_data",
-        return_value={"token": "token", "cookies": []},
-    ), patch.object(
-        service,
-        "_collect_single_page_with_session",
-        return_value=(True, "ok", 3),
-    ) as mock_collect:
+    with (
+        patch.object(service.wechat_auth, "ensure_authenticated", return_value=True),
+        patch.object(
+            service.wechat_auth,
+            "get_session_data",
+            return_value={"token": "token", "cookies": []},
+        ),
+        patch.object(
+            service,
+            "_collect_single_page_with_session",
+            return_value=(True, "ok", 3),
+        ) as mock_collect,
+    ):
         success, message, stats = service.collect_recent_articles_all_accounts()
 
     db.refresh(account)
