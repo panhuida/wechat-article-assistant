@@ -24,6 +24,13 @@ def main():
     download_parser.add_argument("url", nargs="?", help="文章URL")
     download_parser.add_argument("--file", "-f", help="包含文章链接的文件路径")
     download_parser.add_argument("--output", "-o", help="输出目录", default=None)
+    download_parser.add_argument(
+        "--format",
+        dest="save_format",
+        choices=["html", "markdown"],
+        default="markdown",
+        help="保存格式，默认 markdown",
+    )
     download_parser.add_argument("--verbose", "-v", action="store_true", help="显示详细日志")
 
     # 采集最近文章命令
@@ -95,7 +102,7 @@ def download_command(args: argparse.Namespace) -> None:
         cli_logger.info("=" * 60)
 
         success_count, fail_count, errors = download_service.download_from_file(
-            args.file, output_dir
+            args.file, output_dir, output_format=args.save_format
         )
         cli_logger.info(f"批量下载完成，success={success_count}, fail={fail_count}")
 
@@ -120,7 +127,11 @@ def download_command(args: argparse.Namespace) -> None:
         cli_logger.info("=" * 60)
 
         success, message = download_service.download_article(
-            args.url, "命令行下载", "命令行下载", output_dir
+            args.url,
+            "命令行下载",
+            "命令行下载",
+            output_dir,
+            output_format=args.save_format,
         )
         if success:
             cli_logger.info(f"单篇下载成功: {message}")

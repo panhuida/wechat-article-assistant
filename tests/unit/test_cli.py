@@ -7,6 +7,32 @@ import pytest
 from wechat_article_assistant.cli import main
 
 
+def test_download_single_article_passes_format():
+    """测试 download 单篇文章传递保存格式"""
+    mock_service = Mock()
+    mock_service.download_article.return_value = (True, "ok")
+
+    with patch("sys.argv", ["wechat-cli", "download", "https://example.com", "--format", "html"]), patch(
+        "wechat_article_assistant.cli.DownloadService", return_value=mock_service
+    ):
+        main()
+
+    assert mock_service.download_article.call_args.kwargs["output_format"] == "html"
+
+
+def test_download_file_defaults_to_markdown():
+    """测试 download 文件批量下载默认使用 Markdown"""
+    mock_service = Mock()
+    mock_service.download_from_file.return_value = (1, 0, [])
+
+    with patch("sys.argv", ["wechat-cli", "download", "--file", "urls.txt"]), patch(
+        "wechat_article_assistant.cli.DownloadService", return_value=mock_service
+    ):
+        main()
+
+    assert mock_service.download_from_file.call_args.kwargs["output_format"] == "markdown"
+
+
 def test_collect_recent_command_success():
     """测试 collect-recent 命令成功路径"""
     mock_service = Mock()
