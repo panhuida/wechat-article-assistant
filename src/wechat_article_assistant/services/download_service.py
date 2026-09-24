@@ -159,23 +159,23 @@ class DownloadService:
     def _inline_tag_to_markdown(self, tag: Tag | NavigableString) -> str:
         """将行内节点转换为 Markdown 字符串"""
         if isinstance(tag, NavigableString):
-            return str(tag)
+            return re.sub(r"\s+", " ", str(tag).replace("\u200b", ""))
         if not isinstance(tag, Tag):
             return ""
 
         name = (tag.name or "").lower()
+        if name == "br":
+            return "\n"
         text = "".join(
             self._inline_tag_to_markdown(child)
             for child in tag.children
             if isinstance(child, (Tag, NavigableString))
-        ).strip()
+        )
 
-        if name == "br":
-            return "\n"
         if name == "a":
             href = tag.get("href")
             if isinstance(href, str) and href:
-                label = text or href
+                label = text.strip() or href
                 return f"[{label}]({href})"
             return text
         if name == "img":
@@ -185,30 +185,78 @@ class DownloadService:
                 return f"![{alt}]({src})"
             return ""
         if name in {"strong", "b"}:
-            return f"**{text}**" if text else ""
+            return f"**{text.strip()}**" if text.strip() else ""
         if name in {"em", "i"}:
-            return f"*{text}*" if text else ""
+            return f"*{text.strip()}*" if text.strip() else ""
         if name == "code":
-            return f"`{text}`" if text else ""
+            return f"`{text.strip()}`" if text.strip() else ""
+        return text
+
+    def _code_tag_to_text(self, tag: Tag | NavigableString) -> str:
+        """提取代码原文，仅把明确的换行标签转换为换行。"""
+        if isinstance(tag, NavigableString):
+            return str(tag)
+        if not isinstance(tag, Tag):
+            return ""
+        if tag.name == "br":
+            return "\n"
+
+        text = "".join(
+            self._code_tag_to_text(child)
+            for child in tag.children
+            if isinstance(child, (Tag, NavigableString))
+        )
+        is_code_line = tag.name == "code" and tag.parent is not None and tag.parent.name == "pre"
+        if (tag.name in {"div", "p"} or is_code_line) and not text.endswith("\n"):
+            return text + "\n"
         return text
 
     def _container_to_markdown(self, container: Tag) -> str:
         """将内容容器转换为 Markdown 文本"""
         blocks: list[str] = []
+        inline_parts: list[str] = []
+        block_tags = {
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "p",
+            "ul",
+            "ol",
+            "blockquote",
+            "pre",
+            "img",
+            "div",
+            "section",
+            "article",
+        }
 
         def append_block(text: str) -> None:
             cleaned = text.strip()
             if cleaned:
                 blocks.append(cleaned)
 
+        def flush_inline() -> None:
+            if inline_parts:
+                append_block("".join(inline_parts))
+                inline_parts.clear()
+
         for child in container.children:
             if isinstance(child, NavigableString):
-                append_block(str(child))
+                inline_parts.append(self._inline_tag_to_markdown(child))
                 continue
             if not isinstance(child, Tag):
                 continue
 
             name = (child.name or "").lower()
+
+            if name not in block_tags:
+                inline_parts.append(self._inline_tag_to_markdown(child))
+                continue
+
+            flush_inline()
 
             if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
                 level = int(name[1])
@@ -242,16 +290,21 @@ class DownloadService:
                 if quote_text:
                     append_block("\n".join(f"> {line}" for line in quote_text.splitlines()))
             elif name == "pre":
-                code_text = child.get_text("\n", strip=True)
+                code_text = self._code_tag_to_text(child).strip("\n")
                 if code_text:
                     append_block(f"```\n{code_text}\n```")
             elif name == "img":
                 append_block(self._inline_tag_to_markdown(child))
             else:
-                nested = self._container_to_markdown(child)
+                nested = (
+                    self._container_to_markdown(child)
+                    if child.find(list(block_tags))
+                    else self._inline_tag_to_markdown(child)
+                )
                 if nested:
                     append_block(nested)
 
+        flush_inline()
         return "\n\n".join(blocks)
 
     def _build_markdown_content(

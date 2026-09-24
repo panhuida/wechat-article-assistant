@@ -135,6 +135,61 @@ def test_build_markdown_content_supports_common_blocks():
     assert "![封面](https://img.test/1.png)" in markdown
 
 
+def test_build_markdown_content_joins_inline_wrappers_without_extra_breaks() -> None:
+    """微信编辑器的行内标签和零宽空格不能把一句话拆成多段。"""
+    service = DownloadService()
+    soup = BeautifulSoup(
+        """
+        <div id="js_content"><section><span>之前</span><span>\u200b</span><span>在本地搭建了数据湖仓环境（</span><a href="https://example.com">详情</a><span>），找到了一个新手项目在此环境上练习。</span></section>
+        <p><span>第一行</span><br><span>第二行</span></p>
+        <p>另一段</p></div>
+        """,
+        "lxml",
+    )
+
+    markdown = service._build_markdown_content(soup, "标题", "https://example.com/article")
+
+    assert (
+        "之前在本地搭建了数据湖仓环境（[详情](https://example.com)），找到了一个新手项目在此环境上练习。"
+        in markdown
+    )
+    assert "之前\n" not in markdown
+    assert "\u200b" not in markdown
+    assert "第一行\n第二行\n\n另一段" in markdown
+
+
+def test_build_markdown_content_keeps_code_tokens_on_original_lines() -> None:
+    """语法高亮标签不代表换行，只有源码换行和 br 才应换行。"""
+    service = DownloadService()
+    soup = BeautifulSoup(
+        """<div id="js_content"><pre><code><span># 安装 duckdb</span><br><span>(airflow) pan</span><span>@pan</span><span>-</span><span>SER8</span><span>:/opt/airflow</span><span>$</span> <span>cat constraints-</span><span>3.12</span><span>.txt |</span> <span>grep duckdb</span></code></pre></div>""",
+        "lxml",
+    )
+
+    markdown = service._build_markdown_content(soup, "标题", "https://example.com/article")
+
+    assert (
+        "```\n# 安装 duckdb\n(airflow) pan@pan-SER8:/opt/airflow$ cat constraints-3.12.txt | grep duckdb\n```"
+        in markdown
+    )
+
+
+def test_build_markdown_content_separates_wechat_code_line_elements() -> None:
+    """微信文章的 pre 下每个并列 code 标签对应一行源码。"""
+    service = DownloadService()
+    soup = BeautifulSoup(
+        """<div id="js_content"><pre class="code-snippet__js"><code><span leaf=""><span class="code-snippet__comment"># 安装 duckdb</span></span></code><code><span leaf="">(airflow) pan<span class="code-snippet__variable">@pan</span>-SER8:/opt/airflow$ cat constraints-3.12.txt | grep duckdb</span></code><code><span leaf="">(airflow) pan@pan-SER8:/opt/airflow$ pip install duckdb</span></code><code><span leaf=""><br></span></code><code><span leaf=""># 一起安装</span></code></pre></div>""",
+        "lxml",
+    )
+
+    markdown = service._build_markdown_content(soup, "标题", "https://example.com/article")
+
+    assert (
+        "# 安装 duckdb\n(airflow) pan@pan-SER8:/opt/airflow$ cat constraints-3.12.txt | grep duckdb\n(airflow) pan@pan-SER8:/opt/airflow$ pip install duckdb\n\n# 一起安装"
+        in markdown
+    )
+
+
 def test_inject_publish_info_updates_meta_fields():
     """测试注入发布时间、地区和原文链接"""
     service = DownloadService()
