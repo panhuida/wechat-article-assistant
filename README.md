@@ -360,24 +360,6 @@ uv run pytest -m "not slow"
 
 
 
-## 🤝 贡献
+## 关于作者
 
-欢迎提交Issue和Pull Request！
-
-
-
-## 📄 许可证
-
-本项目声明采用 MIT 许可证（见 `pyproject.toml` 中的许可证元数据）。
-
-
-
-## 📧 联系方式
-
-如有问题或建议，请提交Issue或联系项目维护者。
-
-
-
-## 🙏 致谢
-
-感谢所有为本项目做出贡献的开发者！
+- **个人主页与技术博客**：[panhuida](https://panhuida.pages.dev)
